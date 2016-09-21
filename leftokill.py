@@ -41,22 +41,21 @@ def daemon_func(logger):
     while True:
         pt = psutil.process_iter()
         candidate_list = list()
-        report_info = dict()
+        report_entry = dict()
 
         for p in pt:
             if p.ppid() == 1:
                 homedir = pwd.getpwnam(p.username())[5]
                 if homedir.startswith(homeprefix):
                     candidate_list.append(p)
-                    report_info.update({p.pid: {'name': p.name(), 'username': p.username(),
+                    report_entry.update({p.pid: {'name': p.name(), 'username': p.username(),
                                                 'created': datetime.datetime.fromtimestamp(p.create_time()).strftime("%Y-%m-%d %H:%M:%S"),
                                                 'status': p.status(), 'cpuuser': p.cpu_times()[0], 'cpusys': p.cpu_times()[1],
                                                 'rss': bytes2human(p.memory_info()[0]), 'cmdline': ' '.join(p.cmdline())}})
-                    curdict = report_info[p.pid]
                     logger.info('PID:(%d) Candidate:(%s) User:(%s) Created:(%s) Status:(%s) CPU:(user=%s, sys=%s) Memory:(RSS=%s) CMD:(%s)' \
-                                % (p.pid, curdict['name'], curdict['username'], curdict['created'],
-                                   curdict['status'], curdict['cpuuser'], curdict['cpusys'],
-                                   curdict['rss'], curdict['cmdline']))
+                                % (p.pid, report_entry[p.pid]['name'], report_entry[p.pid]['username'], report_entry[p.pid]['created'],
+                                   report_entry[p.pid]['status'], report_entry[p.pid]['cpuuser'], report_entry[p.pid]['cpusys'],
+                                   report_entry[p.pid]['rss'], report_entry[p.pid]['cmdline']))
 
         if candidate_list:
             for p in candidate_list:
@@ -65,11 +64,11 @@ def daemon_func(logger):
             if gone:
                 for p in gone:
                     logger.info('SIGTERM - PID:(%d) Candidate:(%s) User:(%s) Returncode:(%s)' \
-                                % (p.pid, report_info[p.pid]['name'], report_info[p.pid]['username'], p.returncode))
+                                % (p.pid, report_entry[p.pid]['name'], report_entry[p.pid]['username'], p.returncode))
             for p in alive:
                 p.kill()
                 logger.info('SIGKILL - PID:(%d) Candidate:(%s) User:(%s) Returncode:(%s)' \
-                            % (p.pid, report_info[p.pid]['name'], report_info[p.pid]['username'], p.returncode))
+                            % (p.pid, report_entry[p.pid]['name'], report_entry[p.pid]['username'], p.returncode))
 
         time.sleep(15)
 
