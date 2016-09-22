@@ -8,9 +8,13 @@ import datetime
 import logging
 import logging.handlers
 import sys
+import ConfigParser
 
 homeprefix = '/home/'
 logname = 'leftokill'
+conffile = '/etc/leftokill/leftokill.conf'
+confopt = dict()
+logger = None
 
 def bytes2human(n):
     symbols = ('K', 'M', 'G', 'T', 'P', 'E', 'Z', 'Y')
@@ -37,7 +41,7 @@ def init_syslog():
 
     return logger
 
-def daemon_func(logger):
+def daemon_func():
     while True:
         pt = psutil.process_iter()
         candidate_list = list()
@@ -72,12 +76,47 @@ def daemon_func(logger):
 
         time.sleep(15)
 
+def parse_config(conffile):
+    global confopt
+
+    try:
+        config = ConfigParser.ConfigParser()
+        if config.read(conffile):
+            for section in config.sections():
+                if section.startswith('General'):
+                    if config.has_option(section, 'KillEverySec'):
+                        confopt['killeverysec'] = int(config.get(section, 'KillEverySec'))
+                    if config.has_option(section, 'NoExecute'):
+                        confopt['noexec'] = config.get(section, 'NoExecute')
+                if section.startswith('Report'):
+                    if config.has_option(section, 'Send'):
+                        confopt['sendreport'] = config.get(section, 'Send')
+                    if config.has_option(section, 'Email'):
+                        confopt['reportemail'] = config.get(section, 'Email')
+                    if config.has_option(section, 'EveryHours'):
+                        confopt['reporteveryhour'] = int(config.get(section, 'EveryHours'))
+                    if config.has_option(section, 'Verbose'):
+                        confopt['verbose'] = bool(config.get(section, 'Verbose'))
+        else:
+            logger.error('Missing %s' % config)
+            raise SystemExit(1)
+
+    except (ConfigParser.MissingSectionHeaderError, SystemExit) as e:
+        if getattr(e, 'filename', False):
+            logger.error(e.filename + ' is not a valid configuration file')
+            logger.error(e.message)
+        raise SystemExit(1)
+
+
 def main():
+    global logger
     logger = init_syslog()
+    parse_config(conffile)
+
 
     context_daemon = daemon.DaemonContext()
     with context_daemon:
-        daemon_func(logger)
+        daemon_func()
     # daemon_func(logger)
 
 main()
