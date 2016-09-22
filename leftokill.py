@@ -71,8 +71,8 @@ def daemon_func():
                                 % (p.pid, report_entry[p.pid]['name'], report_entry[p.pid]['username'], p.returncode))
             for p in alive:
                 p.kill()
-                logger.info('SIGKILL - PID:(%d) Candidate:(%s) User:(%s) Returncode:(%s)' \
-                            % (p.pid, report_entry[p.pid]['name'], report_entry[p.pid]['username'], p.returncode))
+                logger.info('SIGKILL - PID:(%d) Candidate:(%s) User:(%s)' \
+                            % (p.pid, report_entry[p.pid]['name'], report_entry[p.pid]['username']))
 
         time.sleep(15)
 
@@ -117,6 +117,6 @@ def main():
     context_daemon = daemon.DaemonContext()
     with context_daemon:
         daemon_func()
-    # daemon_func(logger)
+    # daemon_func()
 
 main()
