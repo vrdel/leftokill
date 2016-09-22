@@ -19,12 +19,15 @@ logger = None
 def bytes2human(n):
     symbols = ('K', 'M', 'G', 'T', 'P', 'E', 'Z', 'Y')
     prefix = {}
+
     for i, s in enumerate(symbols):
         prefix[s] = 1 << (i + 1) * 10
+
     for s in reversed(symbols):
         if n >= prefix[s]:
             value = float(n) / prefix[s]
             return '%.1f%s' % (value, s)
+
     return "%sB" % n
 
 def init_syslog():
@@ -50,15 +53,19 @@ def daemon_func():
         for p in pt:
             if p.ppid() == 1:
                 homedir = pwd.getpwnam(p.username())[5]
+
                 if homedir.startswith(homeprefix):
                     candidate_list.append(p)
                     proc_childs = p.children(recursive=True)
+
                     if len(proc_childs) > 0:
                         childs[p.pid] = proc_childs
-                    report_entry.update({p.pid: {'name': p.name(), 'username': p.username(),
-                                                'created': datetime.datetime.fromtimestamp(p.create_time()).strftime("%Y-%m-%d %H:%M:%S"),
-                                                'status': p.status(), 'cpuuser': p.cpu_times()[0], 'cpusys': p.cpu_times()[1],
-                                                'rss': bytes2human(p.memory_info()[0]), 'cmdline': ' '.join(p.cmdline())}})
+
+                    report_entry[p.pid] = dict({'name': p.name(), 'username': p.username(),
+                                               'created': datetime.datetime.fromtimestamp(p.create_time()).strftime("%Y-%m-%d %H:%M:%S"),
+                                               'status': p.status(), 'cpuuser': p.cpu_times()[0], 'cpusys': p.cpu_times()[1],
+                                               'rss': bytes2human(p.memory_info()[0]), 'cmdline': ' '.join(p.cmdline())})
+
                     logger.info('PID:(%d) Candidate:(%s) User:(%s) Created:(%s) Status:(%s) Childs:(%d) CPU:(user=%s, sys=%s) Memory:(RSS=%s) CMD:(%s)' \
                                 % (p.pid, report_entry[p.pid]['name'], report_entry[p.pid]['username'], report_entry[p.pid]['created'],
                                    report_entry[p.pid]['status'], len(proc_childs), report_entry[p.pid]['cpuuser'],
@@ -67,11 +74,13 @@ def daemon_func():
         if candidate_list:
             for p in candidate_list:
                 p.terminate()
+
             gone, alive = psutil.wait_procs(candidate_list, timeout=10)
-            if gone:
-                for p in gone:
-                    logger.info('SIGTERM - PID:(%d) Candidate:(%s) User:(%s) Returncode:(%s)' \
-                                % (p.pid, report_entry[p.pid]['name'], report_entry[p.pid]['username'], p.returncode))
+
+            for p in gone:
+                logger.info('SIGTERM - PID:(%d) Candidate:(%s) User:(%s) Returncode:(%s)' \
+                            % (p.pid, report_entry[p.pid]['name'], report_entry[p.pid]['username'], p.returncode))
+
             for p in alive:
                 p.kill()
                 logger.info('SIGKILL - PID:(%d) Candidate:(%s) User:(%s)' \
@@ -80,11 +89,12 @@ def daemon_func():
         if childs.get(p.pid):
             for c in childs[p.pid]:
                 c.terminate()
+
             gone, alive = psutil.wait_procs(childs[p.pid], timeout=10)
-            if gone:
-                for c in gone:
-                    logger.info('SIGTERM CHILD - PID:(%d) Candidate:(%s) User:(%s) Returncode:(%s)' \
-                                % (c.pid, report_entry[p.pid]['name'], report_entry[p.pid]['username'], c.returncode))
+
+            for c in gone:
+                logger.info('SIGTERM CHILD - PID:(%d) Candidate:(%s) User:(%s) Returncode:(%s)' \
+                            % (c.pid, report_entry[p.pid]['name'], report_entry[p.pid]['username'], c.returncode))
             for c in alive:
                 c.kill()
                 logger.info('SIGKILL CHILD - PID:(%d) Candidate:(%s) User:(%s)' \
