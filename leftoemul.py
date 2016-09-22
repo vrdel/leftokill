@@ -6,8 +6,25 @@ import time
 import daemon
 import argparse
 import pwd
+import threading
+from multiprocessing import Process
+
+def dummyproc():
+    while True:
+        time.sleep(1)
 
 def daemonfunc():
+    th_one = threading.Thread(target=dummyproc)
+    th_one.daemon = True
+    th_one.start()
+
+    th_two = threading.Thread(target=dummyproc)
+    th_two.daemon = True
+    th_two.start()
+
+    p = Process(target=dummyproc)
+    p.start()
+
     while True:
         time.sleep(1)
 
@@ -22,9 +39,11 @@ def main():
         print e
         raise SystemExit(1)
 
+
     d = daemon.DaemonContext(uid=uid, gid=gid)
 
     with d:
         daemonfunc()
+    #daemonfunc()
 
 main()
