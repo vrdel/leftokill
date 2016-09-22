@@ -9,6 +9,10 @@ import pwd
 import threading
 from multiprocessing import Process
 
+def dummyprochilds():
+    p = Process(target=dummyproc)
+    p.start()
+
 def dummyproc():
     while True:
         time.sleep(1)
@@ -22,8 +26,11 @@ def daemonfunc():
     th_two.daemon = True
     th_two.start()
 
-    p = Process(target=dummyproc)
-    p.start()
+    p_one = Process(target=dummyproc)
+    p_one.start()
+
+    p_two = Process(target=dummyprochilds)
+    p_two.start()
 
     while True:
         time.sleep(1)
