@@ -61,14 +61,14 @@ def daemon_func():
                     if len(proc_childs) > 0:
                         childs[p.pid] = proc_childs
 
-                    report_entry[p.pid] = dict({'name': p.name(), 'username': p.username(),
+                    report_entry[p.pid] = dict({'name': p.name(), 'username': p.username(), 'nchilds': len(proc_childs),
                                                'created': datetime.datetime.fromtimestamp(p.create_time()).strftime("%Y-%m-%d %H:%M:%S"),
                                                'status': p.status(), 'cpuuser': p.cpu_times()[0], 'cpusys': p.cpu_times()[1],
                                                'rss': bytes2human(p.memory_info()[0]), 'cmdline': ' '.join(p.cmdline())})
 
                     logger.info('PID:(%d) Candidate:(%s) User:(%s) Created:(%s) Status:(%s) Childs:(%d) CPU:(user=%s, sys=%s) Memory:(RSS=%s) CMD:(%s)' \
                                 % (p.pid, report_entry[p.pid]['name'], report_entry[p.pid]['username'], report_entry[p.pid]['created'],
-                                   report_entry[p.pid]['status'], len(proc_childs), report_entry[p.pid]['cpuuser'],
+                                   report_entry[p.pid]['status'], report_entry[p.pid]['nchilds'], report_entry[p.pid]['cpuuser'],
                                    report_entry[p.pid]['cpusys'], report_entry[p.pid]['rss'], report_entry[p.pid]['cmdline']))
 
         if candidate_list:
