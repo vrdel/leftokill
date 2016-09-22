@@ -101,7 +101,7 @@ def daemon_func():
                             % (c.pid, report_entry[p.pid]['name'], report_entry[p.pid]['username']))
 
 
-        time.sleep(15)
+        time.sleep(confopt['killeverysec'])
 
 def parse_config(conffile):
     global confopt
@@ -141,9 +141,9 @@ def main():
     parse_config(conffile)
 
 
-    #context_daemon = daemon.DaemonContext()
-    #with context_daemon:
-    #    daemon_func()
-    daemon_func()
+    context_daemon = daemon.DaemonContext()
+    with context_daemon:
+        daemon_func()
+    # daemon_func()
 
 main()
