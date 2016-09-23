@@ -11,6 +11,7 @@ import logging.handlers
 import sys
 import ConfigParser
 import threading
+import textwrap
 
 homeprefix = '/home/'
 logname = 'leftokill'
@@ -21,13 +22,24 @@ lock = threading.Lock()
 report_entry = dict()
 
 class Report(threading.Thread):
+    def _report_msg(self, report_entry):
+        report_string = 'Report - ' + str(datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')) + '\n'
+        for e in report_entry.itervalues():
+            if confopt['verbose']:
+                report_string +=  '\n' + e['msg']['candidate']
+            for l in e['msg']['main']:
+                report_string += l + '\n'
+            for l in e['msg']['childs']:
+                report_string += l + '\n'
+        return report_string
+
     def run(self):
         global report_entry
 
         while True:
             if report_entry:
                 lock.acquire()
-                logger.info(json.dumps(report_entry, indent=4))
+                print self._report_msg(report_entry)
 
                 report_entry = {}
                 lock.release()
@@ -96,7 +108,7 @@ def daemon_func():
                                 % (p.pid, report_entry[p.pid]['name'], report_entry[p.pid]['username'], report_entry[p.pid]['created'],
                                    report_entry[p.pid]['status'], report_entry[p.pid]['nchilds'], report_entry[p.pid]['cpuuser'],
                                    report_entry[p.pid]['cpusys'], report_entry[p.pid]['rss'], report_entry[p.pid]['cmdline'])})
-                    report_entry[p.pid]['msg'] = dict({'main': list()})
+                    report_entry[p.pid]['msg'].update(dict({'main': list()}))
                     report_entry[p.pid]['msg'].update(dict({'childs': list()}))
 
         if candidate_list:
@@ -136,6 +148,14 @@ def daemon_func():
                 report_entry[p.pid]['msg']['main'].append(rmsg)
 
         lock.release()
+
+        for e in report_entry.itervalues():
+            if confopt['verbose']:
+                logger.info(e['msg']['candidate'])
+            for l in e['msg']['main']:
+                logger.info(l)
+            for l in e['msg']['childs']:
+                logger.info(l)
 
         time.sleep(confopt['killeverysec'])
 
