@@ -6,15 +6,34 @@ import time
 import daemon
 import datetime
 import logging
+import json
 import logging.handlers
 import sys
 import ConfigParser
+import threading
 
 homeprefix = '/home/'
 logname = 'leftokill'
 conffile = '/etc/leftokill/leftokill.conf'
 confopt = dict()
 logger = None
+lock = threading.Lock()
+report_entry = dict()
+
+class Report(threading.Thread):
+    def run(self):
+        global report_entry
+
+        while True:
+            if report_entry:
+                lock.acquire()
+                logger.info(json.dumps(report_entry, indent=4))
+
+                report_entry = {}
+                lock.release()
+
+            time.sleep(confopt['reporteveryhour'])
+
 
 def bytes2human(n):
     symbols = ('K', 'M', 'G', 'T', 'P', 'E', 'Z', 'Y')
@@ -45,11 +64,18 @@ def init_syslog():
     return logger
 
 def daemon_func():
+    rth = Report()
+    rth.daemon = True
+    rth.start()
+    global reportlines
+    global report_entry
+
     while True:
         pt = psutil.process_iter()
         candidate_list = list()
-        report_entry = dict()
         childs = dict()
+        lock.acquire(False)
+
         for p in pt:
             if p.ppid() == 1:
                 homedir = pwd.getpwnam(p.username())[5]
@@ -66,40 +92,50 @@ def daemon_func():
                                                'status': p.status(), 'cpuuser': p.cpu_times()[0], 'cpusys': p.cpu_times()[1],
                                                'rss': bytes2human(p.memory_info()[0]), 'cmdline': ' '.join(p.cmdline())})
 
-                    logger.info('PID:(%d) Candidate:(%s) User:(%s) Created:(%s) Status:(%s) Childs:(%d) CPU:(user=%s, sys=%s) Memory:(RSS=%s) CMD:(%s)' \
+                    report_entry[p.pid]['msg'] = dict({'candidate': 'PID:(%d) Candidate:(%s) User:(%s) Created:(%s) Status:(%s) Childs:(%d) CPU:(user=%s, sys=%s) Memory:(RSS=%s) CMD:(%s)' \
                                 % (p.pid, report_entry[p.pid]['name'], report_entry[p.pid]['username'], report_entry[p.pid]['created'],
                                    report_entry[p.pid]['status'], report_entry[p.pid]['nchilds'], report_entry[p.pid]['cpuuser'],
-                                   report_entry[p.pid]['cpusys'], report_entry[p.pid]['rss'], report_entry[p.pid]['cmdline']))
+                                   report_entry[p.pid]['cpusys'], report_entry[p.pid]['rss'], report_entry[p.pid]['cmdline'])})
+                    report_entry[p.pid]['msg'] = dict({'main': list()})
+                    report_entry[p.pid]['msg'].update(dict({'childs': list()}))
 
         if candidate_list:
             for p in candidate_list:
+                if childs.get(p.pid):
+                    for c in childs[p.pid]:
+                        c.terminate()
+
+                    gone, alive = psutil.wait_procs(childs[p.pid], timeout=3)
+
+                    for c in gone:
+                        rmsg = 'SIGTERM CHILD - PID:(%d) Candidate:(%s) User:(%s) Returncode:(%s)' \
+                                    % (c.pid, report_entry[p.pid]['name'], report_entry[p.pid]['username'], c.returncode)
+                        report_entry[p.pid]['msg']['childs'].append(rmsg)
+
+                    for c in alive:
+                        c.kill()
+
+                        rmsg = 'SIGKILL CHILD - PID:(%d) Candidate:(%s) User:(%s)' \
+                                    % (c.pid, report_entry[p.pid]['name'], report_entry[p.pid]['username'])
+                        report_entry[p.pid]['msg']['childs'].append(rmsg)
+
                 p.terminate()
 
-            gone, alive = psutil.wait_procs(candidate_list, timeout=10)
+            gone, alive = psutil.wait_procs(candidate_list, timeout=3)
 
             for p in gone:
-                logger.info('SIGTERM - PID:(%d) Candidate:(%s) User:(%s) Returncode:(%s)' \
-                            % (p.pid, report_entry[p.pid]['name'], report_entry[p.pid]['username'], p.returncode))
+                rmsg = 'SIGTERM - PID:(%d) Candidate:(%s) User:(%s) Returncode:(%s)' \
+                            % (p.pid, report_entry[p.pid]['name'], report_entry[p.pid]['username'], p.returncode)
+                report_entry[p.pid]['msg']['main'].append(rmsg)
 
             for p in alive:
                 p.kill()
-                logger.info('SIGKILL - PID:(%d) Candidate:(%s) User:(%s)' \
-                            % (p.pid, report_entry[p.pid]['name'], report_entry[p.pid]['username']))
 
-        if childs.get(p.pid):
-            for c in childs[p.pid]:
-                c.terminate()
+                rmsg = 'SIGKILL - PID:(%d) Candidate:(%s) User:(%s)' \
+                            % (p.pid, report_entry[p.pid]['name'], report_entry[p.pid]['username'])
+                report_entry[p.pid]['msg']['main'].append(rmsg)
 
-            gone, alive = psutil.wait_procs(childs[p.pid], timeout=10)
-
-            for c in gone:
-                logger.info('SIGTERM CHILD - PID:(%d) Candidate:(%s) User:(%s) Returncode:(%s)' \
-                            % (c.pid, report_entry[p.pid]['name'], report_entry[p.pid]['username'], c.returncode))
-            for c in alive:
-                c.kill()
-                logger.info('SIGKILL CHILD - PID:(%d) Candidate:(%s) User:(%s)' \
-                            % (c.pid, report_entry[p.pid]['name'], report_entry[p.pid]['username']))
-
+        lock.release()
 
         time.sleep(confopt['killeverysec'])
 
@@ -112,7 +148,7 @@ def parse_config(conffile):
             for section in config.sections():
                 if section.startswith('General'):
                     if config.has_option(section, 'KillEverySec'):
-                        confopt['killeverysec'] = int(config.get(section, 'KillEverySec'))
+                        confopt['killeverysec'] = float(config.get(section, 'KillEverySec'))
                     if config.has_option(section, 'NoExecute'):
                         confopt['noexec'] = config.get(section, 'NoExecute')
                 if section.startswith('Report'):
@@ -121,7 +157,7 @@ def parse_config(conffile):
                     if config.has_option(section, 'Email'):
                         confopt['reportemail'] = config.get(section, 'Email')
                     if config.has_option(section, 'EveryHours'):
-                        confopt['reporteveryhour'] = int(config.get(section, 'EveryHours'))
+                        confopt['reporteveryhour'] = float(config.get(section, 'EveryHours'))
                     if config.has_option(section, 'Verbose'):
                         confopt['verbose'] = bool(config.get(section, 'Verbose'))
         else:
@@ -143,7 +179,7 @@ def main():
 
     context_daemon = daemon.DaemonContext()
     with context_daemon:
-        daemon_func()
+       daemon_func()
     # daemon_func()
 
 main()
