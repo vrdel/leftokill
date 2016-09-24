@@ -11,7 +11,9 @@ import logging.handlers
 import sys
 import ConfigParser
 import threading
-import textwrap
+
+import smtplib
+from email.mime.text import MIMEText
 
 homeprefix = '/home/'
 logname = 'leftokill'
@@ -26,7 +28,7 @@ class Report(threading.Thread):
         report_string = 'Report - ' + str(datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')) + '\n'
         for e in report_entry.itervalues():
             if confopt['verbose']:
-                report_string +=  '\n' + e['msg']['candidate']
+                report_string += '\n' + e['msg']['candidate'] + '\n'
             for l in e['msg']['main']:
                 report_string += l + '\n'
             for l in e['msg']['childs']:
@@ -39,7 +41,21 @@ class Report(threading.Thread):
         while True:
             if report_entry:
                 lock.acquire()
-                print self._report_msg(report_entry)
+
+                msg = MIMEText(self._report_msg(report_entry))
+                msg['From'] = 'leftokill@srce.hr'
+                msg['To'] = 'dvrcic@srce.hr'
+                msg['Subject'] = 'Leftokill'
+
+                try:
+                    s = smtplib.SMTP('smtp.srce.hr', 587)
+                    s.starttls()
+                    s.ehlo()
+                    s.login('dvrcic', 'xxxx')
+                    s.sendmail('leftokill@srce.hr', ['dvrcic@srce.hr'], msg.as_string())
+                    s.quit()
+                except smtplib.SMTPException as e:
+                    logger.error(repr(e))
 
                 report_entry = {}
                 lock.release()
