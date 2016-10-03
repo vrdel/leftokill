@@ -43,16 +43,16 @@ class Report(threading.Thread):
                 lock.acquire()
 
                 msg = MIMEText(self._report_msg(report_entry))
-                msg['From'] = 'leftokill@srce.hr'
-                msg['To'] = 'dvrcic@srce.hr'
+                msg['From'] = confopt['reportfrom']
+                msg['To'] = confopt['reportto']
                 msg['Subject'] = 'Leftokill'
 
                 try:
-                    s = smtplib.SMTP('smtp.srce.hr', 587)
+                    s = smtplib.SMTP(confopt['reportsmtp'], 587)
                     s.starttls()
                     s.ehlo()
                     s.login('dvrcic', 'xxxx')
-                    s.sendmail('leftokill@srce.hr', ['dvrcic@srce.hr'], msg.as_string())
+                    s.sendmail(confopt['reportfrom'], [confopt['reportto']], msg.as_string())
                     s.quit()
                 except smtplib.SMTPException as e:
                     logger.error(repr(e))
@@ -190,8 +190,12 @@ def parse_config(conffile):
                 if section.startswith('Report'):
                     if config.has_option(section, 'Send'):
                         confopt['sendreport'] = config.get(section, 'Send')
-                    if config.has_option(section, 'Email'):
-                        confopt['reportemail'] = config.get(section, 'Email')
+                    if config.has_option(section, 'To'):
+                        confopt['reportto'] = config.get(section, 'To')
+                    if config.has_option(section, 'From'):
+                        confopt['reportfrom'] = config.get(section, 'From')
+                    if config.has_option(section, 'SMTP'):
+                        confopt['reportsmtp'] = config.get(section, 'SMTP')
                     if config.has_option(section, 'EveryHours'):
                         confopt['reporteveryhour'] = float(config.get(section, 'EveryHours'))
                     if config.has_option(section, 'Verbose'):
