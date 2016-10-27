@@ -1,17 +1,17 @@
 #!/usr/bin/python
 
-import psutil
-import pwd
-import time
+import ConfigParser
 import daemon
 import datetime
-import logging
 import json
+import logging
 import logging.handlers
-import sys
+import psutil
+import pwd
 import socket
-import ConfigParser
+import sys
 import threading
+import time
 
 import smtplib
 from email.mime.text import MIMEText
@@ -57,7 +57,7 @@ class Report(threading.Thread):
                     s = smtplib.SMTP(confopt['reportsmtp'], 587)
                     s.starttls()
                     s.ehlo()
-                    s.login('dvrcic', 'xxxx')
+                    s.login(confopt['reportsmtplogin'], confopt['reportsmtppass'])
                     s.sendmail(confopt['reportfrom'], [confopt['reportto']], msg.as_string())
                     s.quit()
                 except (socket.error, smtplib.SMTPException) as e:
@@ -106,6 +106,7 @@ def daemon_func():
 
     global reportlines
     global report_entry
+    reported = set()
 
     while True:
         pt = psutil.process_iter()
@@ -137,7 +138,6 @@ def daemon_func():
                     report_entry[p.pid]['msg'].update(dict({'childs': list()}))
 
         if candidate_list and confopt['noexec'] == False:
-            logger.info(candidate_list)
             for p in candidate_list:
                 if childs.get(p.pid):
                     for c in childs[p.pid]:
@@ -175,7 +175,14 @@ def daemon_func():
 
         lock.release()
 
-        report_syslog = report_entry.copy()
+        report_syslog, torepkeys = dict(), list()
+        if reported:
+            torepkeys = set(report_entry.keys()) - reported
+        else:
+            torepkeys = set(report_entry.keys())
+        for tr in torepkeys:
+            report_syslog.update({tr: report_entry[tr]})
+
         for e in report_syslog.itervalues():
             if confopt['verbose']:
                 logger.info(e['msg']['candidate'])
@@ -184,6 +191,7 @@ def daemon_func():
             for l in e['msg']['childs']:
                 logger.info(l)
         report_syslog = {}
+        reported.update(report_entry.keys())
 
         if confopt['sendreport'] == False:
             report_entry = {}
@@ -211,6 +219,10 @@ def parse_config(conffile):
                         confopt['reportfrom'] = config.get(section, 'From')
                     if config.has_option(section, 'SMTP'):
                         confopt['reportsmtp'] = config.get(section, 'SMTP')
+                    if config.has_option(section, 'SMTPLogin'):
+                        confopt['reportsmtplogin'] = config.get(section, 'SMTPLogin')
+                    if config.has_option(section, 'SMTPPass'):
+                        confopt['reportsmtppass'] = config.get(section, 'SMTPPass')
                     if config.has_option(section, 'EveryHours'):
                         confopt['reporteveryhour'] = 3600 * float(config.get(section, 'EveryHours'))
                     if config.has_option(section, 'Verbose'):
@@ -230,7 +242,6 @@ def main():
     global logger
     logger = init_syslog()
     parse_config(conffile)
-
 
     context_daemon = daemon.DaemonContext()
     with context_daemon:
