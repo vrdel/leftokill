@@ -17,6 +17,7 @@ from email.mime.text import MIMEText
 
 homeprefix = '/home/'
 logname = 'leftokill'
+# conffile = 'leftokill.conf'
 conffile = '/etc/leftokill/leftokill.conf'
 confopt = dict()
 logger = None
@@ -92,9 +93,11 @@ def init_syslog():
     return logger
 
 def daemon_func():
-    rth = Report()
-    rth.daemon = True
-    rth.start()
+    if eval(confopt['sendreport']) == True:
+        rth = Report()
+        rth.daemon = True
+        rth.start()
+
     global reportlines
     global report_entry
 
@@ -128,6 +131,7 @@ def daemon_func():
                     report_entry[p.pid]['msg'].update(dict({'childs': list()}))
 
         if candidate_list:
+            logger.info(candidate_list)
             for p in candidate_list:
                 if childs.get(p.pid):
                     for c in childs[p.pid]:
@@ -165,13 +169,18 @@ def daemon_func():
 
         lock.release()
 
-        for e in report_entry.itervalues():
+        report_syslog = report_entry.copy()
+        for e in report_syslog.itervalues():
             if confopt['verbose']:
                 logger.info(e['msg']['candidate'])
             for l in e['msg']['main']:
                 logger.info(l)
             for l in e['msg']['childs']:
                 logger.info(l)
+        report_syslog = {}
+
+        if eval(confopt['sendreport']) == False:
+            report_entry = {}
 
         time.sleep(confopt['killeverysec'])
 
@@ -199,7 +208,7 @@ def parse_config(conffile):
                     if config.has_option(section, 'EveryHours'):
                         confopt['reporteveryhour'] = float(config.get(section, 'EveryHours'))
                     if config.has_option(section, 'Verbose'):
-                        confopt['verbose'] = bool(config.get(section, 'Verbose'))
+                        confopt['verbose'] = eval(config.get(section, 'Verbose'))
         else:
             logger.error('Missing %s' % config)
             raise SystemExit(1)
