@@ -27,7 +27,11 @@ report_entry = dict()
 
 class Report(threading.Thread):
     def _report_msg(self, report_entry):
-        report_string = 'Report - ' + str(datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')) + '\n'
+        execmode = ''
+        if confopt['noexec']:
+            execmode = 'NoExecute mode - '
+
+        report_string = 'Report - %s' % (execmode) + str(datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')) + '\n'
         for e in report_entry.itervalues():
             if confopt['verbose']:
                 report_string += '\n' + e['msg']['candidate'] + '\n'
@@ -59,7 +63,8 @@ class Report(threading.Thread):
                 except (socket.error, smtplib.SMTPException) as e:
                     logger.error(repr(self.__class__.__name__).replace('\'', '') + ': ' + repr(e))
 
-                report_entry = {}
+                if confopt['noexec'] == False:
+                    report_entry = {}
                 lock.release()
 
             time.sleep(confopt['reporteveryhour'])
@@ -94,7 +99,7 @@ def init_syslog():
     return logger
 
 def daemon_func():
-    if eval(confopt['sendreport']) == True:
+    if confopt['sendreport'] == True:
         rth = Report()
         rth.daemon = True
         rth.start()
@@ -131,7 +136,7 @@ def daemon_func():
                     report_entry[p.pid]['msg'].update(dict({'main': list()}))
                     report_entry[p.pid]['msg'].update(dict({'childs': list()}))
 
-        if candidate_list:
+        if candidate_list and confopt['noexec'] == False:
             logger.info(candidate_list)
             for p in candidate_list:
                 if childs.get(p.pid):
@@ -180,7 +185,7 @@ def daemon_func():
                 logger.info(l)
         report_syslog = {}
 
-        if eval(confopt['sendreport']) == False:
+        if confopt['sendreport'] == False:
             report_entry = {}
 
         time.sleep(confopt['killeverysec'])
@@ -196,10 +201,10 @@ def parse_config(conffile):
                     if config.has_option(section, 'KillEverySec'):
                         confopt['killeverysec'] = float(config.get(section, 'KillEverySec'))
                     if config.has_option(section, 'NoExecute'):
-                        confopt['noexec'] = config.get(section, 'NoExecute')
+                        confopt['noexec'] = eval(config.get(section, 'NoExecute'))
                 if section.startswith('Report'):
                     if config.has_option(section, 'Send'):
-                        confopt['sendreport'] = config.get(section, 'Send')
+                        confopt['sendreport'] = eval(config.get(section, 'Send'))
                     if config.has_option(section, 'To'):
                         confopt['reportto'] = config.get(section, 'To')
                     if config.has_option(section, 'From'):
@@ -207,7 +212,7 @@ def parse_config(conffile):
                     if config.has_option(section, 'SMTP'):
                         confopt['reportsmtp'] = config.get(section, 'SMTP')
                     if config.has_option(section, 'EveryHours'):
-                        confopt['reporteveryhour'] = float(config.get(section, 'EveryHours'))
+                        confopt['reporteveryhour'] = 3600 * float(config.get(section, 'EveryHours'))
                     if config.has_option(section, 'Verbose'):
                         confopt['verbose'] = eval(config.get(section, 'Verbose'))
         else:
