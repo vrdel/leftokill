@@ -9,6 +9,7 @@ import logging
 import json
 import logging.handlers
 import sys
+import socket
 import ConfigParser
 import threading
 
@@ -55,8 +56,8 @@ class Report(threading.Thread):
                     s.login('dvrcic', 'xxxx')
                     s.sendmail(confopt['reportfrom'], [confopt['reportto']], msg.as_string())
                     s.quit()
-                except smtplib.SMTPException as e:
-                    logger.error(repr(e))
+                except (socket.error, smtplib.SMTPException) as e:
+                    logger.error(repr(self.__class__.__name__).replace('\'', '') + ': ' + repr(e))
 
                 report_entry = {}
                 lock.release()
