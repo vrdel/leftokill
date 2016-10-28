@@ -98,6 +98,28 @@ def init_syslog():
 
     return logger
 
+def kill_and_term(candidates):
+    cgone, calive, pgone, palive = list(), list(), list(), list()
+
+    for p in candidates:
+        if childs.get(p.pid):
+            for c in childs[p.pid]:
+                c.terminate()
+
+            cgone, calive = psutil.wait_procs(childs[p.pid], timeout=3)
+
+            for c in calive:
+                c.kill()
+
+        p.terminate()
+
+    pgone, palive = psutil.wait_procs(candidates, timeout=3)
+
+    for p in alive:
+        p.kill()
+
+    return cgone, calive, pgone, palive
+
 def daemon_func():
     if confopt['sendreport'] == True:
         rth = Report()
@@ -138,37 +160,24 @@ def daemon_func():
                     report_entry[p.pid]['msg'].update(dict({'childs': list()}))
 
         if candidate_list and confopt['noexec'] == False:
-            for p in candidate_list:
-                if childs.get(p.pid):
-                    for c in childs[p.pid]:
-                        c.terminate()
+            cgone, calive, pgone, palive = kill_and_term(candidate_list)
 
-                    gone, alive = psutil.wait_procs(childs[p.pid], timeout=3)
+            for c in cgone:
+                rmsg = 'SIGTERM CHILD - PID:(%d) Candidate:(%s) User:(%s) Returncode:(%s)' \
+                            % (c.pid, report_entry[p.pid]['name'], report_entry[p.pid]['username'], c.returncode)
+                report_entry[p.pid]['msg']['childs'].append(rmsg)
 
-                    for c in gone:
-                        rmsg = 'SIGTERM CHILD - PID:(%d) Candidate:(%s) User:(%s) Returncode:(%s)' \
-                                    % (c.pid, report_entry[p.pid]['name'], report_entry[p.pid]['username'], c.returncode)
-                        report_entry[p.pid]['msg']['childs'].append(rmsg)
+            for c in calive:
+                rmsg = 'SIGKILL CHILD - PID:(%d) Candidate:(%s) User:(%s)' \
+                            % (c.pid, report_entry[p.pid]['name'], report_entry[p.pid]['username'])
+                report_entry[p.pid]['msg']['childs'].append(rmsg)
 
-                    for c in alive:
-                        c.kill()
-
-                        rmsg = 'SIGKILL CHILD - PID:(%d) Candidate:(%s) User:(%s)' \
-                                    % (c.pid, report_entry[p.pid]['name'], report_entry[p.pid]['username'])
-                        report_entry[p.pid]['msg']['childs'].append(rmsg)
-
-                p.terminate()
-
-            gone, alive = psutil.wait_procs(candidate_list, timeout=3)
-
-            for p in gone:
+            for p in pgone:
                 rmsg = 'SIGTERM - PID:(%d) Candidate:(%s) User:(%s) Returncode:(%s)' \
                             % (p.pid, report_entry[p.pid]['name'], report_entry[p.pid]['username'], p.returncode)
                 report_entry[p.pid]['msg']['main'].append(rmsg)
 
-            for p in alive:
-                p.kill()
-
+            for p in palive:
                 rmsg = 'SIGKILL - PID:(%d) Candidate:(%s) User:(%s)' \
                             % (p.pid, report_entry[p.pid]['name'], report_entry[p.pid]['username'])
                 report_entry[p.pid]['msg']['main'].append(rmsg)
