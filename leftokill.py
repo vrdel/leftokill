@@ -137,13 +137,51 @@ def build_candidates():
 
     return candidate_list
 
+def build_report_entry(cand, pgone=list(), palive=list(), cgone=list(), calive=list()):
+    global report_entry
+
+    if cand:
+        proc_childs = cand.children(recursive=True)
+        report_entry[cand.pid] = dict({'name': cand.name(), 'username': cand.username(), 'nchilds': len(proc_childs),
+                                    'created': datetime.datetime.fromtimestamp(cand.create_time()).strftime("%Y-%m-%d %H:%M:%S"),
+                                    'status': cand.status(), 'cpuuser': cand.cpu_times()[0], 'cpusys': cand.cpu_times()[1],
+                                    'rss': bytes2human(cand.memory_info()[0]), 'cmdline': ' '.join(cand.cmdline())})
+
+        report_entry[cand.pid]['msg'] = dict({'candidate': 'PID:(%d) Candidate:(%s) User:(%s) Created:(%s) Status:(%s) Childs:(%d) CPU:(user=%s, sys=%s) Memory:(RSS=%s) CMD:(%s)' \
+                    % (cand.pid, report_entry[cand.pid]['name'], report_entry[cand.pid]['username'], report_entry[cand.pid]['created'],
+                        report_entry[cand.pid]['status'], report_entry[cand.pid]['nchilds'], report_entry[cand.pid]['cpuuser'],
+                        report_entry[cand.pid]['cpusys'], report_entry[cand.pid]['rss'], report_entry[cand.pid]['cmdline'])})
+        report_entry[cand.pid]['msg'].update(dict({'main': list()}))
+        report_entry[cand.pid]['msg'].update(dict({'childs': list()}))
+
+    else:
+        for p in pgone:
+            rmsg = 'SIGTERM - PID:(%d) Candidate:(%s) User:(%s) Returncode:(%s)' \
+                        % (p.pid, report_entry[p.pid]['name'], report_entry[p.pid]['username'], p.returncode)
+            report_entry[p.pid]['msg']['main'].append(rmsg)
+
+        for p in palive:
+            rmsg = 'SIGKILL - PID:(%d) Candidate:(%s) User:(%s)' \
+                        % (p.pid, report_entry[p.pid]['name'], report_entry[p.pid]['username'])
+            report_entry[p.pid]['msg']['main'].append(rmsg)
+
+        for c in cgone:
+            rmsg = 'SIGTERM CHILD - PID:(%d) Candidate:(%s) User:(%s) Returncode:(%s)' \
+                        % (c.pid, report_entry[p.pid]['name'], report_entry[p.pid]['username'], c.returncode)
+            report_entry[p.pid]['msg']['childs'].append(rmsg)
+
+        for c in calive:
+            rmsg = 'SIGKILL CHILD - PID:(%d) Candidate:(%s) User:(%s)' \
+                        % (c.pid, report_entry[p.pid]['name'], report_entry[p.pid]['username'])
+            report_entry[p.pid]['msg']['childs'].append(rmsg)
+
+
 def daemon_func():
     if confopt['sendreport'] == True:
         rth = Report()
         rth.daemon = True
         rth.start()
 
-    global reportlines
     global report_entry
     reported = set()
 
@@ -155,42 +193,13 @@ def daemon_func():
         for p in candidate_list:
             proc_childs = p.children(recursive=True)
 
-            report_entry[p.pid] = dict({'name': p.name(), 'username': p.username(), 'nchilds': len(proc_childs),
-                                        'created': datetime.datetime.fromtimestamp(p.create_time()).strftime("%Y-%m-%d %H:%M:%S"),
-                                        'status': p.status(), 'cpuuser': p.cpu_times()[0], 'cpusys': p.cpu_times()[1],
-                                        'rss': bytes2human(p.memory_info()[0]), 'cmdline': ' '.join(p.cmdline())})
-
-            report_entry[p.pid]['msg'] = dict({'candidate': 'PID:(%d) Candidate:(%s) User:(%s) Created:(%s) Status:(%s) Childs:(%d) CPU:(user=%s, sys=%s) Memory:(RSS=%s) CMD:(%s)' \
-                        % (p.pid, report_entry[p.pid]['name'], report_entry[p.pid]['username'], report_entry[p.pid]['created'],
-                            report_entry[p.pid]['status'], report_entry[p.pid]['nchilds'], report_entry[p.pid]['cpuuser'],
-                            report_entry[p.pid]['cpusys'], report_entry[p.pid]['rss'], report_entry[p.pid]['cmdline'])})
-            report_entry[p.pid]['msg'].update(dict({'main': list()}))
-            report_entry[p.pid]['msg'].update(dict({'childs': list()}))
-
         if candidate_list and confopt['noexec'] == False:
             for cand in candidate_list:
+                build_report_entry(cand)
+
                 cgone, calive, pgone, palive = kill_and_term(cand)
 
-                for p in pgone:
-                    rmsg = 'SIGTERM - PID:(%d) Candidate:(%s) User:(%s) Returncode:(%s)' \
-                                % (p.pid, report_entry[p.pid]['name'], report_entry[p.pid]['username'], p.returncode)
-                    report_entry[p.pid]['msg']['main'].append(rmsg)
-
-                for p in palive:
-                    rmsg = 'SIGKILL - PID:(%d) Candidate:(%s) User:(%s)' \
-                                % (p.pid, report_entry[p.pid]['name'], report_entry[p.pid]['username'])
-                    report_entry[p.pid]['msg']['main'].append(rmsg)
-
-                for c in cgone:
-                    rmsg = 'SIGTERM CHILD - PID:(%d) Candidate:(%s) User:(%s) Returncode:(%s)' \
-                                % (c.pid, report_entry[p.pid]['name'], report_entry[p.pid]['username'], c.returncode)
-                    report_entry[p.pid]['msg']['childs'].append(rmsg)
-
-                for c in calive:
-                    rmsg = 'SIGKILL CHILD - PID:(%d) Candidate:(%s) User:(%s)' \
-                                % (c.pid, report_entry[p.pid]['name'], report_entry[p.pid]['username'])
-                    report_entry[p.pid]['msg']['childs'].append(rmsg)
-
+                build_report_entry(None, pgone, palive, cgone, calive)
 
         lock.release()
 
