@@ -69,7 +69,6 @@ class Report(threading.Thread):
 
             time.sleep(confopt['reporteveryhour'])
 
-
 def bytes2human(n):
     symbols = ('K', 'M', 'G', 'T', 'P', 'E', 'Z', 'Y')
     prefix = {}
@@ -125,6 +124,19 @@ def kill_and_term(candidate):
 
     return cgone, calive, pgone, palive
 
+def build_candidates():
+    pt = psutil.process_iter()
+    candidate_list = list()
+
+    for p in pt:
+        if p.ppid() == 1:
+            homedir = pwd.getpwnam(p.username())[5]
+
+            if homedir.startswith(homeprefix):
+                candidate_list.append(p)
+
+    return candidate_list
+
 def daemon_func():
     if confopt['sendreport'] == True:
         rth = Report()
@@ -136,30 +148,24 @@ def daemon_func():
     reported = set()
 
     while True:
-        pt = psutil.process_iter()
-        candidate_list = list()
-        childs = dict()
         lock.acquire(False)
 
-        for p in pt:
-            if p.ppid() == 1:
-                homedir = pwd.getpwnam(p.username())[5]
+        candidate_list = build_candidates()
 
-                if homedir.startswith(homeprefix):
-                    candidate_list.append(p)
-                    proc_childs = p.children(recursive=True)
+        for p in candidate_list:
+            proc_childs = p.children(recursive=True)
 
-                    report_entry[p.pid] = dict({'name': p.name(), 'username': p.username(), 'nchilds': len(proc_childs),
-                                               'created': datetime.datetime.fromtimestamp(p.create_time()).strftime("%Y-%m-%d %H:%M:%S"),
-                                               'status': p.status(), 'cpuuser': p.cpu_times()[0], 'cpusys': p.cpu_times()[1],
-                                               'rss': bytes2human(p.memory_info()[0]), 'cmdline': ' '.join(p.cmdline())})
+            report_entry[p.pid] = dict({'name': p.name(), 'username': p.username(), 'nchilds': len(proc_childs),
+                                        'created': datetime.datetime.fromtimestamp(p.create_time()).strftime("%Y-%m-%d %H:%M:%S"),
+                                        'status': p.status(), 'cpuuser': p.cpu_times()[0], 'cpusys': p.cpu_times()[1],
+                                        'rss': bytes2human(p.memory_info()[0]), 'cmdline': ' '.join(p.cmdline())})
 
-                    report_entry[p.pid]['msg'] = dict({'candidate': 'PID:(%d) Candidate:(%s) User:(%s) Created:(%s) Status:(%s) Childs:(%d) CPU:(user=%s, sys=%s) Memory:(RSS=%s) CMD:(%s)' \
-                                % (p.pid, report_entry[p.pid]['name'], report_entry[p.pid]['username'], report_entry[p.pid]['created'],
-                                   report_entry[p.pid]['status'], report_entry[p.pid]['nchilds'], report_entry[p.pid]['cpuuser'],
-                                   report_entry[p.pid]['cpusys'], report_entry[p.pid]['rss'], report_entry[p.pid]['cmdline'])})
-                    report_entry[p.pid]['msg'].update(dict({'main': list()}))
-                    report_entry[p.pid]['msg'].update(dict({'childs': list()}))
+            report_entry[p.pid]['msg'] = dict({'candidate': 'PID:(%d) Candidate:(%s) User:(%s) Created:(%s) Status:(%s) Childs:(%d) CPU:(user=%s, sys=%s) Memory:(RSS=%s) CMD:(%s)' \
+                        % (p.pid, report_entry[p.pid]['name'], report_entry[p.pid]['username'], report_entry[p.pid]['created'],
+                            report_entry[p.pid]['status'], report_entry[p.pid]['nchilds'], report_entry[p.pid]['cpuuser'],
+                            report_entry[p.pid]['cpusys'], report_entry[p.pid]['rss'], report_entry[p.pid]['cmdline'])})
+            report_entry[p.pid]['msg'].update(dict({'main': list()}))
+            report_entry[p.pid]['msg'].update(dict({'childs': list()}))
 
         if candidate_list and confopt['noexec'] == False:
             for cand in candidate_list:
@@ -249,7 +255,6 @@ def parse_config(conffile):
             logger.error(e.filename + ' is not a valid configuration file')
             logger.error(e.message)
         raise SystemExit(1)
-
 
 def main():
     global logger
