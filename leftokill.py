@@ -190,14 +190,14 @@ def daemon_func():
 
         candidate_list = build_candidates()
 
-        if candidate_list and confopt['noexec'] == False:
+        if candidate_list:
             for cand in candidate_list:
                 build_report_entry(cand=cand)
 
-                cgone, calive, pgone, palive = kill_and_term(cand)
-
-                build_report_entry(pgone=pgone, palive=palive, cgone=cgone,
-                                   calive=calive)
+                if confopt['noexec'] == False:
+                    cgone, calive, pgone, palive = kill_and_term(cand)
+                    build_report_entry(pgone=pgone, palive=palive, cgone=cgone,
+                                       calive=calive)
 
         lock.release()
 
