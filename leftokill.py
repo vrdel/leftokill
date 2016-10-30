@@ -190,9 +190,6 @@ def daemon_func():
 
         candidate_list = build_candidates()
 
-        for p in candidate_list:
-            proc_childs = p.children(recursive=True)
-
         if candidate_list and confopt['noexec'] == False:
             for cand in candidate_list:
                 build_report_entry(cand=cand)
