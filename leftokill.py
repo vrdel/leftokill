@@ -137,7 +137,7 @@ def build_candidates():
 
     return candidate_list
 
-def build_report_entry(cand, pgone=list(), palive=list(), cgone=list(), calive=list()):
+def build_report_entry(cand=None, pgone=list(), palive=list(), cgone=list(), calive=list()):
     global report_entry
 
     if cand:
@@ -154,7 +154,7 @@ def build_report_entry(cand, pgone=list(), palive=list(), cgone=list(), calive=l
         report_entry[cand.pid]['msg'].update(dict({'main': list()}))
         report_entry[cand.pid]['msg'].update(dict({'childs': list()}))
 
-    else:
+    elif pgone and palive and cgone and calive:
         for p in pgone:
             rmsg = 'SIGTERM - PID:(%d) Candidate:(%s) User:(%s) Returncode:(%s)' \
                         % (p.pid, report_entry[p.pid]['name'], report_entry[p.pid]['username'], p.returncode)
@@ -195,11 +195,12 @@ def daemon_func():
 
         if candidate_list and confopt['noexec'] == False:
             for cand in candidate_list:
-                build_report_entry(cand)
+                build_report_entry(cand=cand)
 
                 cgone, calive, pgone, palive = kill_and_term(cand)
 
-                build_report_entry(None, pgone, palive, cgone, calive)
+                build_report_entry(pgone=pgone, palive=palive, cgone=cgone,
+                                   calive=calive)
 
         lock.release()
 
