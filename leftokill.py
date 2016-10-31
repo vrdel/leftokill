@@ -23,7 +23,7 @@ conffile = '/etc/leftokill/leftokill.conf'
 confopt = dict()
 logger = None
 lock = threading.Lock()
-report_email = dict()
+reported, report_email = set(), dict()
 
 class Report(threading.Thread):
     def _report_msg(self, report_entry):
@@ -154,7 +154,7 @@ def build_report_email(cand=None, pgone=list(), palive=list(), cgone=list(), cal
         report_email[cand.pid]['msg'].update(dict({'main': list()}))
         report_email[cand.pid]['msg'].update(dict({'childs': list()}))
 
-    elif pgone and palive and cgone and calive:
+    else:
         for p in pgone:
             rmsg = 'SIGTERM - PID:(%d) Candidate:(%s) User:(%s) Returncode:(%s)' \
                         % (p.pid, report_email[p.pid]['name'], report_email[p.pid]['username'], p.returncode)
@@ -175,15 +175,36 @@ def build_report_email(cand=None, pgone=list(), palive=list(), cgone=list(), cal
                         % (c.pid, report_email[p.pid]['name'], report_email[p.pid]['username'])
             report_email[p.pid]['msg']['childs'].append(rmsg)
 
+def build_report_syslog(report_email):
+    global reported
+    report_syslog, torepkeys, msg = dict(), list(), list()
+
+    if reported:
+        torepkeys = set(report_email.keys()) - reported
+    else:
+        torepkeys = set(report_email.keys())
+    for tr in torepkeys:
+        report_syslog.update({tr: report_email[tr]})
+
+    for e in report_syslog.itervalues():
+        if confopt['verbose']:
+            msg.append(e['msg']['candidate'])
+        for l in e['msg']['main']:
+            msg.append(l)
+        for l in e['msg']['childs']:
+            msg.append(l)
+
+    reported.update(report_email.keys())
+
+    return msg
 
 def daemon_func():
+    global report_email
+
     if confopt['sendreport'] == True:
         rth = Report()
         rth.daemon = True
         rth.start()
-
-    global report_email
-    reported = set()
 
     while True:
         lock.acquire(False)
@@ -199,28 +220,13 @@ def daemon_func():
                     build_report_email(pgone=pgone, palive=palive, cgone=cgone,
                                        calive=calive)
 
-        lock.release()
-
-        report_syslog, torepkeys = dict(), list()
-        if reported:
-            torepkeys = set(report_email.keys()) - reported
-        else:
-            torepkeys = set(report_email.keys())
-        for tr in torepkeys:
-            report_syslog.update({tr: report_email[tr]})
-
-        for e in report_syslog.itervalues():
-            if confopt['verbose']:
-                logger.info(e['msg']['candidate'])
-            for l in e['msg']['main']:
-                logger.info(l)
-            for l in e['msg']['childs']:
-                logger.info(l)
-        report_syslog = {}
-        reported.update(report_email.keys())
+            for m in build_report_syslog(report_email):
+                logger.info(m)
 
         if confopt['sendreport'] == False:
             report_email = {}
+
+        lock.release()
 
         time.sleep(confopt['killeverysec'])
 
