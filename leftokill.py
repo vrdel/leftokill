@@ -26,7 +26,7 @@ lock = threading.Lock()
 reported, report_email = set(), dict()
 
 class Report(threading.Thread):
-    def _report_msg(self, report_entry):
+    def _report_payload(self, report_entry):
         execmode = ''
         if confopt['noexec']:
             execmode = 'NoExecute mode - '
@@ -41,6 +41,25 @@ class Report(threading.Thread):
                 report_string += l + '\n'
         return report_string
 
+    def _report_email(self, report_email):
+        msg = MIMEText(self._report_payload(report_email))
+        msg['From'] = confopt['reportfrom']
+        msg['To'] = confopt['reportto']
+        msg['Subject'] = 'Leftokill'
+
+        return msg.as_string()
+
+    def _send_email(self):
+        try:
+            s = smtplib.SMTP(confopt['reportsmtp'], 587)
+            s.starttls()
+            s.ehlo()
+            s.login(confopt['reportsmtplogin'], confopt['reportsmtppass'])
+            s.sendmail(confopt['reportfrom'], [confopt['reportto']], self._report_email(report_email))
+            s.quit()
+        except (socket.error, smtplib.SMTPException) as e:
+            logger.error(repr(self.__class__.__name__).replace('\'', '') + ': ' + repr(e))
+
     def run(self):
         global report_email
 
@@ -48,23 +67,11 @@ class Report(threading.Thread):
             if report_email:
                 lock.acquire()
 
-                msg = MIMEText(self._report_msg(report_email))
-                msg['From'] = confopt['reportfrom']
-                msg['To'] = confopt['reportto']
-                msg['Subject'] = 'Leftokill'
-
-                try:
-                    s = smtplib.SMTP(confopt['reportsmtp'], 587)
-                    s.starttls()
-                    s.ehlo()
-                    s.login(confopt['reportsmtplogin'], confopt['reportsmtppass'])
-                    s.sendmail(confopt['reportfrom'], [confopt['reportto']], msg.as_string())
-                    s.quit()
-                except (socket.error, smtplib.SMTPException) as e:
-                    logger.error(repr(self.__class__.__name__).replace('\'', '') + ': ' + repr(e))
+                self._send_email()
 
                 if confopt['noexec'] == False:
                     report_email = {}
+
                 lock.release()
 
             time.sleep(confopt['reporteveryhour'])
