@@ -1,6 +1,7 @@
 #!/usr/bin/python
 
 import ConfigParser
+import argparse
 import daemon
 import datetime
 import json
@@ -281,9 +282,17 @@ def main():
     logger = init_syslog()
     parse_config(conffile)
 
-    context_daemon = daemon.DaemonContext()
-    with context_daemon:
-       daemon_func()
-    # daemon_func()
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-n', dest='nofork', action='store_true',
+                        help="do not fork into background",
+                        required=False)
+    args = parser.parse_args()
+
+    if args.nofork:
+        daemon_func()
+    else:
+        context_daemon = daemon.DaemonContext()
+        with context_daemon:
+            daemon_func()
 
 main()
