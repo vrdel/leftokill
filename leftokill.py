@@ -72,6 +72,8 @@ class Report(threading.Thread):
                 lock.acquire()
 
                 if self._send_email():
+                    logger.info('Sent report with %d killed leftovers' % (len(report_email)))
+
                     if confopt['noexec'] == False:
                         report_email = {}
 
