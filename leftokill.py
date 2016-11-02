@@ -24,7 +24,7 @@ conffile = '/etc/leftokill/leftokill.conf'
 confopt = dict()
 logger = None
 lock = threading.Lock()
-reported, report_email = set(), dict()
+reported, report_leftovers = set(), dict()
 logfile = '/var/log/leftokill/leftokill.log'
 
 class Logger(object):
@@ -64,7 +64,7 @@ class Logger(object):
     def get(self):
         return self.logger
 
-class Report(threading.Thread):
+class ReportEmail(threading.Thread):
     def _report_payload(self, report_entry):
         execmode = ''
         if confopt['noexec']:
@@ -94,7 +94,7 @@ class Report(threading.Thread):
             s.starttls()
             s.ehlo()
             s.login(confopt['reportsmtplogin'], confopt['reportsmtppass'])
-            s.sendmail(confopt['reportfrom'], [confopt['reportto']], self._report_email(report_email))
+            s.sendmail(confopt['reportfrom'], [confopt['reportto']], self._report_email(report_leftovers))
             s.quit()
         except (socket.error, smtplib.SMTPException) as e:
             logger.error(repr(self.__class__.__name__).replace('\'', '') + ': ' + repr(e))
@@ -103,35 +103,21 @@ class Report(threading.Thread):
         return True
 
     def run(self):
-        global report_email
+        global report_leftovers
 
         while True:
-            if report_email:
+            if report_leftovers:
                 lock.acquire()
 
                 if self._send_email():
-                    logger.info('Sent report with %d killed leftovers' % (len(report_email)))
+                    logger.info('Sent report with %d killed leftovers' % (len(report_leftovers)))
 
                     if confopt['noexec'] == False:
-                        report_email = {}
+                        report_leftovers = {}
 
                     lock.release()
 
             time.sleep(confopt['reporteveryhour'])
-
-def bytes2human(n):
-    symbols = ('K', 'M', 'G', 'T', 'P', 'E', 'Z', 'Y')
-    prefix = {}
-
-    for i, s in enumerate(symbols):
-        prefix[s] = 1 << (i + 1) * 10
-
-    for s in reversed(symbols):
-        if n >= prefix[s]:
-            value = float(n) / prefix[s]
-            return '%.1f%s' % (value, s)
-
-    return "%sB" % n
 
 def term_and_kill(candidate):
     cgone, calive, pgone, palive = list(), list(), list(), list()
@@ -173,54 +159,68 @@ def build_candidates():
 
     return candidate_list
 
-def build_report_email(cand=None, pgone=list(), palive=list(), cgone=list(), calive=list()):
-    global report_email
+def build_report_leftovers(cand=None, pgone=list(), palive=list(), cgone=list(), calive=list()):
+    global report_leftovers
+
+    def bytes2human(n):
+        symbols = ('K', 'M', 'G', 'T', 'P', 'E', 'Z', 'Y')
+        prefix = {}
+
+        for i, s in enumerate(symbols):
+            prefix[s] = 1 << (i + 1) * 10
+
+        for s in reversed(symbols):
+            if n >= prefix[s]:
+                value = float(n) / prefix[s]
+                return '%.1f%s' % (value, s)
+
+        return "%sB" % n
 
     if cand:
         proc_childs = cand.children(recursive=True)
-        report_email[cand.pid] = dict({'name': cand.name(), 'username': cand.username(), 'nchilds': len(proc_childs),
+        report_leftovers[cand.pid] = dict({'name': cand.name(), 'username': cand.username(), 'nchilds': len(proc_childs),
                                     'created': datetime.datetime.fromtimestamp(cand.create_time()).strftime("%Y-%m-%d %H:%M:%S"),
                                     'status': cand.status(), 'cpuuser': cand.cpu_times()[0], 'cpusys': cand.cpu_times()[1],
                                     'rss': bytes2human(cand.memory_info()[0]), 'cmdline': ' '.join(cand.cmdline())})
 
-        report_email[cand.pid]['msg'] = dict({'candidate': 'PID:%d Candidate:%s User:%s Created:%s Status:%s Childs:%d CPU:user=%s, sys=%s Memory:RSS=%s CMD:%s' \
-                    % (cand.pid, report_email[cand.pid]['name'], report_email[cand.pid]['username'], report_email[cand.pid]['created'],
-                        report_email[cand.pid]['status'], report_email[cand.pid]['nchilds'], report_email[cand.pid]['cpuuser'],
-                        report_email[cand.pid]['cpusys'], report_email[cand.pid]['rss'], report_email[cand.pid]['cmdline'])})
-        report_email[cand.pid]['msg'].update(dict({'main': list()}))
-        report_email[cand.pid]['msg'].update(dict({'childs': list()}))
+        report_leftovers[cand.pid]['msg'] = dict({'candidate': 'PID:%d Candidate:%s User:%s Created:%s Status:%s Childs:%d CPU:user=%s, sys=%s Memory:RSS=%s CMD:%s' \
+                    % (cand.pid, report_leftovers[cand.pid]['name'], report_leftovers[cand.pid]['username'], report_leftovers[cand.pid]['created'],
+                        report_leftovers[cand.pid]['status'], report_leftovers[cand.pid]['nchilds'], report_leftovers[cand.pid]['cpuuser'],
+                        report_leftovers[cand.pid]['cpusys'], report_leftovers[cand.pid]['rss'], report_leftovers[cand.pid]['cmdline'])})
+        report_leftovers[cand.pid]['msg'].update(dict({'main': list()}))
+        report_leftovers[cand.pid]['msg'].update(dict({'childs': list()}))
 
     else:
         for p in pgone:
             rmsg = 'SIGTERM - PID:%d Candidate:%s User:%s Returncode:%s' \
-                        % (p.pid, report_email[p.pid]['name'], report_email[p.pid]['username'], p.returncode)
-            report_email[p.pid]['msg']['main'].append(rmsg)
+                        % (p.pid, report_leftovers[p.pid]['name'], report_leftovers[p.pid]['username'], p.returncode)
+            report_leftovers[p.pid]['msg']['main'].append(rmsg)
 
         for p in palive:
             rmsg = 'SIGKILL - PID:%d Candidate:%s User:%s' \
-                        % (p.pid, report_email[p.pid]['name'], report_email[p.pid]['username'])
-            report_email[p.pid]['msg']['main'].append(rmsg)
+                        % (p.pid, report_leftovers[p.pid]['name'], report_leftovers[p.pid]['username'])
+            report_leftovers[p.pid]['msg']['main'].append(rmsg)
 
         for c in cgone:
             rmsg = 'SIGTERM CHILD - PID:%d Candidate:%s User:%s Returncode:%s' \
-                        % (c.pid, report_email[p.pid]['name'], report_email[p.pid]['username'], c.returncode)
-            report_email[p.pid]['msg']['childs'].append(rmsg)
+                        % (c.pid, report_leftovers[p.pid]['name'], report_leftovers[p.pid]['username'], c.returncode)
+            report_leftovers[p.pid]['msg']['childs'].append(rmsg)
 
         for c in calive:
             rmsg = 'SIGKILL CHILD - PID:%d Candidate:%s User:%s' \
-                        % (c.pid, report_email[p.pid]['name'], report_email[p.pid]['username'])
-            report_email[p.pid]['msg']['childs'].append(rmsg)
+                        % (c.pid, report_leftovers[p.pid]['name'], report_leftovers[p.pid]['username'])
+            report_leftovers[p.pid]['msg']['childs'].append(rmsg)
 
-def build_report_syslog(report_email):
+def build_report_syslog(leftovers):
     global reported
     report_syslog, torepkeys, msg = dict(), list(), list()
 
     if reported:
-        torepkeys = set(report_email.keys()) - reported
+        torepkeys = set(leftovers.keys()) - reported
     else:
-        torepkeys = set(report_email.keys())
+        torepkeys = set(leftovers.keys())
     for tr in torepkeys:
-        report_syslog.update({tr: report_email[tr]})
+        report_syslog.update({tr: leftovers[tr]})
 
     for e in report_syslog.itervalues():
         if confopt['verbose']:
@@ -230,15 +230,15 @@ def build_report_syslog(report_email):
         for l in e['msg']['childs']:
             msg.append(l)
 
-    reported.update(report_email.keys())
+    reported.update(leftovers.keys())
 
     return msg
 
 def daemon_func():
-    global report_email
+    global report_leftovers
 
     if confopt['sendreport'] == True:
-        rth = Report()
+        rth = ReportEmail()
         rth.daemon = True
         rth.start()
 
@@ -249,18 +249,18 @@ def daemon_func():
 
         if candidate_list:
             for cand in candidate_list:
-                build_report_email(cand=cand)
+                build_report_leftovers(cand=cand)
 
                 if confopt['noexec'] == False:
                     cgone, calive, pgone, palive = term_and_kill(cand)
-                    build_report_email(pgone=pgone, palive=palive, cgone=cgone,
+                    build_report_leftovers(pgone=pgone, palive=palive, cgone=cgone,
                                        calive=calive)
 
-            for m in build_report_syslog(report_email):
+            for m in build_report_syslog(report_leftovers):
                 logger.info(m)
 
         if confopt['sendreport'] == False:
-            report_email = {}
+            report_leftovers = {}
 
         lock.release()
 
