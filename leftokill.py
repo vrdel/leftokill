@@ -157,7 +157,7 @@ def build_report_email(cand=None, pgone=list(), palive=list(), cgone=list(), cal
                                     'status': cand.status(), 'cpuuser': cand.cpu_times()[0], 'cpusys': cand.cpu_times()[1],
                                     'rss': bytes2human(cand.memory_info()[0]), 'cmdline': ' '.join(cand.cmdline())})
 
-        report_email[cand.pid]['msg'] = dict({'candidate': 'PID:(%d) Candidate:(%s) User:(%s) Created:(%s) Status:(%s) Childs:(%d) CPU:(user=%s, sys=%s) Memory:(RSS=%s) CMD:(%s)' \
+        report_email[cand.pid]['msg'] = dict({'candidate': 'PID:%d Candidate:%s User:%s Created:%s Status:%s Childs:%d CPU:user=%s, sys=%s Memory:RSS=%s CMD:%s' \
                     % (cand.pid, report_email[cand.pid]['name'], report_email[cand.pid]['username'], report_email[cand.pid]['created'],
                         report_email[cand.pid]['status'], report_email[cand.pid]['nchilds'], report_email[cand.pid]['cpuuser'],
                         report_email[cand.pid]['cpusys'], report_email[cand.pid]['rss'], report_email[cand.pid]['cmdline'])})
@@ -166,22 +166,22 @@ def build_report_email(cand=None, pgone=list(), palive=list(), cgone=list(), cal
 
     else:
         for p in pgone:
-            rmsg = 'SIGTERM - PID:(%d) Candidate:(%s) User:(%s) Returncode:(%s)' \
+            rmsg = 'SIGTERM - PID:%d Candidate:%s User:%s Returncode:%s' \
                         % (p.pid, report_email[p.pid]['name'], report_email[p.pid]['username'], p.returncode)
             report_email[p.pid]['msg']['main'].append(rmsg)
 
         for p in palive:
-            rmsg = 'SIGKILL - PID:(%d) Candidate:(%s) User:(%s)' \
+            rmsg = 'SIGKILL - PID:%d Candidate:%s User:%s' \
                         % (p.pid, report_email[p.pid]['name'], report_email[p.pid]['username'])
             report_email[p.pid]['msg']['main'].append(rmsg)
 
         for c in cgone:
-            rmsg = 'SIGTERM CHILD - PID:(%d) Candidate:(%s) User:(%s) Returncode:(%s)' \
+            rmsg = 'SIGTERM CHILD - PID:%d Candidate:%s User:%s Returncode:%s' \
                         % (c.pid, report_email[p.pid]['name'], report_email[p.pid]['username'], c.returncode)
             report_email[p.pid]['msg']['childs'].append(rmsg)
 
         for c in calive:
-            rmsg = 'SIGKILL CHILD - PID:(%d) Candidate:(%s) User:(%s)' \
+            rmsg = 'SIGKILL CHILD - PID:%d Candidate:%s User:%s' \
                         % (c.pid, report_email[p.pid]['name'], report_email[p.pid]['username'])
             report_email[p.pid]['msg']['childs'].append(rmsg)
 
