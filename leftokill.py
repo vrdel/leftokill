@@ -60,6 +60,9 @@ class Report(threading.Thread):
             s.quit()
         except (socket.error, smtplib.SMTPException) as e:
             logger.error(repr(self.__class__.__name__).replace('\'', '') + ': ' + repr(e))
+            return False
+
+        return True
 
     def run(self):
         global report_email
@@ -68,12 +71,11 @@ class Report(threading.Thread):
             if report_email:
                 lock.acquire()
 
-                self._send_email()
+                if self._send_email():
+                    if confopt['noexec'] == False:
+                        report_email = {}
 
-                if confopt['noexec'] == False:
-                    report_email = {}
-
-                lock.release()
+                    lock.release()
 
             time.sleep(confopt['reporteveryhour'])
 
