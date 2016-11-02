@@ -27,6 +27,43 @@ lock = threading.Lock()
 reported, report_email = set(), dict()
 logfile = '/var/log/leftokill/leftokill.log'
 
+class Logger(object):
+    logger = None
+
+    def _init_stdout(self):
+        lfs = '%(name)s[%(process)s]: %(levelname)s %(message)s'
+        lf = logging.Formatter(lfs)
+        lv = logging.INFO
+
+        logging.basicConfig(format=lfs, level=lv, stream=sys.stdout)
+        self.logger = logging.getLogger(logname)
+
+    def init_syslog(self):
+        lfs = '%(name)s[%(process)s]: %(levelname)s %(message)s'
+        lf = logging.Formatter(lfs)
+        lv = logging.INFO
+
+        sh = logging.handlers.SysLogHandler('/dev/log', logging.handlers.SysLogHandler.LOG_USER)
+        sh.setFormatter(lf)
+        sh.setLevel(lv)
+        self.logger.addHandler(sh)
+
+    def init_filelog(self):
+        lfs = '%(asctime)s %(name)s[%(process)s]: %(levelname)s %(message)s'
+        lf = logging.Formatter(fmt=lfs, datefmt='%Y-%m-%d %H:%M:%S')
+        lv = logging.INFO
+
+        sf = logging.handlers.RotatingFileHandler(logfile, maxBytes=1024*1024, backupCount=5)
+        sf.setFormatter(lf)
+        sf.setLevel(lv)
+        self.logger.addHandler(sf)
+
+    def __init__(self):
+        self._init_stdout()
+
+    def get(self):
+        return self.logger
+
 class Report(threading.Thread):
     def _report_payload(self, report_entry):
         execmode = ''
@@ -95,26 +132,6 @@ def bytes2human(n):
             return '%.1f%s' % (value, s)
 
     return "%sB" % n
-
-def init_syslog(logger):
-    lfs = '%(name)s[%(process)s]: %(levelname)s %(message)s'
-    lf = logging.Formatter(lfs)
-    lv = logging.INFO
-
-    sh = logging.handlers.SysLogHandler('/dev/log', logging.handlers.SysLogHandler.LOG_USER)
-    sh.setFormatter(lf)
-    sh.setLevel(lv)
-    logger.addHandler(sh)
-
-def init_filelog(logger):
-    lfs = '%(asctime)s %(name)s[%(process)s]: %(levelname)s %(message)s'
-    lf = logging.Formatter(fmt=lfs, datefmt='%Y-%m-%d %H:%M:%S')
-    lv = logging.INFO
-
-    sf = logging.handlers.RotatingFileHandler(logfile, maxBytes=1024*1024, backupCount=5)
-    sf.setFormatter(lf)
-    sf.setLevel(lv)
-    logger.addHandler(sf)
 
 def term_and_kill(candidate):
     cgone, calive, pgone, palive = list(), list(), list(), list()
@@ -296,21 +313,16 @@ def parse_config(conffile):
 
 def main():
     global logger
-
-    lfs = '%(name)s[%(process)s]: %(levelname)s %(message)s'
-    lf = logging.Formatter(lfs)
-    lv = logging.INFO
-
-    logging.basicConfig(format=lfs, level=lv, stream=sys.stdout)
-    logger = logging.getLogger(logname)
+    lobj = Logger()
+    logger = lobj.get()
 
     parse_config(conffile)
 
     for l in confopt['logmode']:
         if l.lower() == 'syslog':
-            init_syslog(logger)
+            lobj.init_syslog()
         if l.lower() == 'file':
-            init_filelog(logger)
+            lobj.init_filelog()
 
     parser = argparse.ArgumentParser()
     parser.add_argument('-n', dest='nofork', action='store_true',
