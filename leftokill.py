@@ -319,7 +319,10 @@ def main():
     args = parser.parse_args()
 
     if args.nofork:
-        daemon_func()
+        try:
+            daemon_func()
+        except KeyboardInterrupt:
+            raise SystemExit(1)
     else:
         context_daemon = daemon.DaemonContext()
         with context_daemon:
