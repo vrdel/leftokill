@@ -146,7 +146,7 @@ def term_and_kill(candidate):
 
     return cgone, calive, pgone, palive
 
-def build_candidates():
+def find_candidates():
     pt = psutil.process_iter()
     candidate_list = list()
 
@@ -245,7 +245,7 @@ def daemon_func():
     while True:
         lock.acquire(False)
 
-        candidate_list = build_candidates()
+        candidate_list = find_candidates()
 
         if candidate_list:
             for cand in candidate_list:
@@ -302,7 +302,7 @@ def parse_config(conffile):
                     if config.has_option(section, 'Verbose'):
                         confopt['verbose'] = eval(config.get(section, 'Verbose'))
         else:
-            logger.error('Missing %s' % config)
+            logger.error('Missing %s' % conffile)
             raise SystemExit(1)
 
     except (ConfigParser.MissingSectionHeaderError, SystemExit) as e:
