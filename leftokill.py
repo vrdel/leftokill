@@ -267,43 +267,43 @@ def daemon_func():
         time.sleep(confopt['killeverysec'])
 
 def parse_config(conffile):
+    reqsections = set(['general', 'report'])
     global confopt
 
     try:
         config = ConfigParser.ConfigParser()
         if config.read(conffile):
+            sections = map(lambda v: v.lower(), config.sections())
+
+            diff = reqsections.difference(sections)
+            if diff:
+                raise ConfigParser.NoSectionError((' '.join(diff)))
+
             for section in config.sections():
                 if section.startswith('General'):
-                    if config.has_option(section, 'KillEverySec'):
-                        confopt['killeverysec'] = float(config.get(section, 'KillEverySec'))
-                    if config.has_option(section, 'NoExecute'):
-                        confopt['noexec'] = eval(config.get(section, 'NoExecute'))
-                    if config.has_option(section, 'LogMode'):
-                        val = config.get(section, 'LogMode')
-                        if ',' in val:
-                            confopt['logmode'] = map(lambda v: v.strip(), val.split(','))
-                        else:
-                            confopt['logmode'] = [val.strip()]
+                    confopt['killeverysec'] = float(config.get(section, 'KillEverySec'))
+                    confopt['noexec'] = eval(config.get(section, 'NoExecute'))
+                    val = config.get(section, 'LogMode')
+                    if ',' in val:
+                        confopt['logmode'] = map(lambda v: v.strip(), val.split(','))
+                    else:
+                        confopt['logmode'] = [val.strip()]
                 if section.startswith('Report'):
-                    if config.has_option(section, 'Send'):
-                        confopt['sendreport'] = eval(config.get(section, 'Send'))
-                    if config.has_option(section, 'To'):
-                        confopt['reportto'] = config.get(section, 'To')
-                    if config.has_option(section, 'From'):
-                        confopt['reportfrom'] = config.get(section, 'From')
-                    if config.has_option(section, 'SMTP'):
-                        confopt['reportsmtp'] = config.get(section, 'SMTP')
-                    if config.has_option(section, 'SMTPLogin'):
-                        confopt['reportsmtplogin'] = config.get(section, 'SMTPLogin')
-                    if config.has_option(section, 'SMTPPass'):
-                        confopt['reportsmtppass'] = config.get(section, 'SMTPPass')
-                    if config.has_option(section, 'EveryHours'):
-                        confopt['reporteveryhour'] = 3600 * float(config.get(section, 'EveryHours'))
-                    if config.has_option(section, 'Verbose'):
-                        confopt['verbose'] = eval(config.get(section, 'Verbose'))
+                    confopt['sendreport'] = eval(config.get(section, 'Send'))
+                    confopt['reportto'] = config.get(section, 'To')
+                    confopt['reportfrom'] = config.get(section, 'From')
+                    confopt['reportsmtp'] = config.get(section, 'SMTP')
+                    confopt['reportsmtplogin'] = config.get(section, 'SMTPLogin')
+                    confopt['reportsmtppass'] = config.get(section, 'SMTPPass')
+                    confopt['reporteveryhour'] = 3600 * float(config.get(section, 'EveryHours'))
+                    confopt['verbose'] = eval(config.get(section, 'Verbose'))
         else:
             logger.error('Missing %s' % conffile)
             raise SystemExit(1)
+
+    except (ConfigParser.NoOptionError, ConfigParser.NoSectionError) as e:
+        logger.error(e)
+        raise SystemExit(1)
 
     except (ConfigParser.MissingSectionHeaderError, SystemExit) as e:
         if getattr(e, 'filename', False):
