@@ -1,0 +1,197 @@
+#!/usr/bin/python
+
+import argparse
+import daemon
+import datetime
+import psutil
+import pwd
+import socket
+import sys
+import threading
+import time
+
+from leftokill import log
+from leftokill import reportmail
+from leftokill import config
+
+homeprefix = '/home/'
+# conffile = 'leftokill.conf'
+conffile = '/etc/leftokill/leftokill.conf'
+confopt = dict()
+logger = None
+reported, report_leftovers = set(), dict()
+
+
+def term_and_kill(candidate):
+    cgone, calive, pgone, palive = list(), list(), list(), list()
+    childs = dict()
+
+    proc_childs = candidate.children(recursive=True)
+
+    if len(proc_childs) > 0:
+        childs[candidate.pid] = proc_childs
+
+        if childs.get(candidate.pid):
+            for c in childs[candidate.pid]:
+                c.terminate()
+
+            cgone, calive = psutil.wait_procs(childs[candidate.pid], timeout=3)
+
+            for c in calive:
+                c.kill()
+
+    candidate.terminate()
+
+    pgone, palive = psutil.wait_procs([candidate], timeout=3)
+
+    for p in palive:
+        p.kill()
+
+    return cgone, calive, pgone, palive
+
+def find_candidates():
+    pt = psutil.process_iter()
+    candidate_list = list()
+
+    for p in pt:
+        if p.ppid() == 1:
+            homedir = pwd.getpwnam(p.username())[5]
+
+            if homedir.startswith(homeprefix):
+                candidate_list.append(p)
+
+    return candidate_list
+
+def build_report_leftovers(cand=None, pgone=list(), palive=list(), cgone=list(), calive=list()):
+    global report_leftovers
+
+    def bytes2human(n):
+        symbols = ('K', 'M', 'G', 'T', 'P', 'E', 'Z', 'Y')
+        prefix = {}
+
+        for i, s in enumerate(symbols):
+            prefix[s] = 1 << (i + 1) * 10
+
+        for s in reversed(symbols):
+            if n >= prefix[s]:
+                value = float(n) / prefix[s]
+                return '%.1f%s' % (value, s)
+
+        return "%sB" % n
+
+    if cand:
+        proc_childs = cand.children(recursive=True)
+        report_leftovers[cand.pid] = dict({'name': cand.name(), 'username': cand.username(), 'nchilds': len(proc_childs),
+                                    'created': datetime.datetime.fromtimestamp(cand.create_time()).strftime("%Y-%m-%d %H:%M:%S"),
+                                    'status': cand.status(), 'cpuuser': cand.cpu_times()[0], 'cpusys': cand.cpu_times()[1],
+                                    'rss': bytes2human(cand.memory_info()[0]), 'cmdline': ' '.join(cand.cmdline())})
+
+        report_leftovers[cand.pid]['msg'] = dict({'candidate': 'PID:%d Candidate:%s User:%s Created:%s Status:%s Childs:%d CPU:user=%s, sys=%s Memory:RSS=%s CMD:%s' \
+                    % (cand.pid, report_leftovers[cand.pid]['name'], report_leftovers[cand.pid]['username'], report_leftovers[cand.pid]['created'],
+                        report_leftovers[cand.pid]['status'], report_leftovers[cand.pid]['nchilds'], report_leftovers[cand.pid]['cpuuser'],
+                        report_leftovers[cand.pid]['cpusys'], report_leftovers[cand.pid]['rss'], report_leftovers[cand.pid]['cmdline'])})
+        report_leftovers[cand.pid]['msg'].update(dict({'main': list()}))
+        report_leftovers[cand.pid]['msg'].update(dict({'childs': list()}))
+
+    else:
+        for p in pgone:
+            rmsg = 'SIGTERM - PID:%d Returncode:%s' % (p.pid, p.returncode)
+            report_leftovers[p.pid]['msg']['main'].append(rmsg)
+
+        for p in palive:
+            rmsg = 'SIGKILL - PID:%d' % (p.pid )
+            report_leftovers[p.pid]['msg']['main'].append(rmsg)
+
+        for c in cgone:
+            rmsg = 'SIGTERM CHILD - PID:%d Returncode:%s' % (c.pid, c.returncode)
+            report_leftovers[p.pid]['msg']['childs'].append(rmsg)
+
+        for c in calive:
+            rmsg = 'SIGKILL CHILD - PID:%d' % (c.pid)
+            report_leftovers[p.pid]['msg']['childs'].append(rmsg)
+
+def build_report_syslog(leftovers, confopts):
+    global reported
+    report_syslog, torepkeys, msg = dict(), list(), list()
+
+    if reported:
+        torepkeys = set(leftovers.keys()) - reported
+    else:
+        torepkeys = set(leftovers.keys())
+    for tr in torepkeys:
+        report_syslog.update({tr: leftovers[tr]})
+
+    for e in report_syslog.itervalues():
+        if confopts['verbose']:
+            msg.append(e['msg']['candidate'])
+        for l in e['msg']['main']:
+            msg.append(l)
+        for l in e['msg']['childs']:
+            msg.append(l)
+
+    reported.update(leftovers.keys())
+
+    return msg
+
+def daemon_func(confopts):
+    global report_leftovers
+    lock = threading.Lock()
+
+    if confopts['sendreport'] == True:
+        rth = reportmail.Report(logger, lock, report_leftovers, confopts)
+        rth.start()
+
+    while True:
+        lock.acquire(False)
+
+        candidate_list = find_candidates()
+
+        if candidate_list:
+            for cand in candidate_list:
+                build_report_leftovers(cand=cand)
+
+                if confopts['noexec'] == False:
+                    cgone, calive, pgone, palive = term_and_kill(cand)
+                    build_report_leftovers(pgone=pgone, palive=palive, cgone=cgone,
+                                       calive=calive)
+
+            for m in build_report_syslog(report_leftovers, confopts):
+                logger.info(m)
+
+        if confopts['sendreport'] == False:
+            report_leftovers.clear()
+
+        lock.release()
+
+        time.sleep(confopts['killeverysec'])
+
+def run():
+    global logger
+    lobj = log.Logger()
+    logger = lobj.get()
+
+    confopts = config.parse_config(conffile, logger)
+
+    for l in confopts['logmode']:
+        if l.lower() == 'syslog':
+            lobj.init_syslog()
+        if l.lower() == 'file':
+            lobj.init_filelog()
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-n', dest='nofork', action='store_true',
+                        help="do not fork into background",
+                        required=False)
+    args = parser.parse_args()
+
+    if args.nofork:
+        try:
+            daemon_func(confopts)
+        except KeyboardInterrupt:
+            raise SystemExit(1)
+    else:
+        context_daemon = daemon.DaemonContext()
+        with context_daemon:
+            daemon_func(confopts)
+
+run()
