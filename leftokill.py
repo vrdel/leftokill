@@ -31,7 +31,7 @@ class Logger(object):
     logger = None
 
     def _init_stdout(self):
-        lfs = '%(name)s[%(process)s]: %(levelname)s %(message)s'
+        lfs = '%(name)s: %(levelname)s %(message)s'
         lf = logging.Formatter(lfs)
         lv = logging.INFO
 
@@ -192,23 +192,19 @@ def build_report_leftovers(cand=None, pgone=list(), palive=list(), cgone=list(),
 
     else:
         for p in pgone:
-            rmsg = 'SIGTERM - PID:%d Candidate:%s User:%s Returncode:%s' \
-                        % (p.pid, report_leftovers[p.pid]['name'], report_leftovers[p.pid]['username'], p.returncode)
+            rmsg = 'SIGTERM - PID:%d Returncode:%s' % (p.pid, p.returncode)
             report_leftovers[p.pid]['msg']['main'].append(rmsg)
 
         for p in palive:
-            rmsg = 'SIGKILL - PID:%d Candidate:%s User:%s' \
-                        % (p.pid, report_leftovers[p.pid]['name'], report_leftovers[p.pid]['username'])
+            rmsg = 'SIGKILL - PID:%d' % (p.pid )
             report_leftovers[p.pid]['msg']['main'].append(rmsg)
 
         for c in cgone:
-            rmsg = 'SIGTERM CHILD - PID:%d Candidate:%s User:%s Returncode:%s' \
-                        % (c.pid, report_leftovers[p.pid]['name'], report_leftovers[p.pid]['username'], c.returncode)
+            rmsg = 'SIGTERM CHILD - PID:%d Returncode:%s' % (c.pid, c.returncode)
             report_leftovers[p.pid]['msg']['childs'].append(rmsg)
 
         for c in calive:
-            rmsg = 'SIGKILL CHILD - PID:%d Candidate:%s User:%s' \
-                        % (c.pid, report_leftovers[p.pid]['name'], report_leftovers[p.pid]['username'])
+            rmsg = 'SIGKILL CHILD - PID:%d' % (c.pid)
             report_leftovers[p.pid]['msg']['childs'].append(rmsg)
 
 def build_report_syslog(leftovers):
