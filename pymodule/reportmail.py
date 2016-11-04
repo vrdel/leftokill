@@ -14,8 +14,7 @@ class Report(threading.Thread):
 
         report_string = 'Report - %s' % (execmode) + str(datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')) + '\n'
         for e in report_entry.itervalues():
-            if self.confopt['verbose']:
-                report_string += '\n' + e['msg']['candidate'] + '\n'
+            report_string += '\n' + e['msg']['candidate'] + '\n'
             for l in e['msg']['main']:
                 report_string += l + '\n'
             for l in e['msg']['childs']:

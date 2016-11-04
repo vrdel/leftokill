@@ -113,8 +113,7 @@ def build_report_syslog(leftovers, confopts):
         report_syslog.update({tr: leftovers[tr]})
 
     for e in report_syslog.itervalues():
-        if confopts['verbose']:
-            msg.append(e['msg']['candidate'])
+        msg.append(e['msg']['candidate'])
         for l in e['msg']['main']:
             msg.append(l)
         for l in e['msg']['childs']:

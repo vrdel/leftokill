@@ -30,7 +30,6 @@ def parse_config(conffile, logger):
                     confopts['reportsmtplogin'] = config.get(section, 'SMTPLogin')
                     confopts['reportsmtppass'] = config.get(section, 'SMTPPass')
                     confopts['reporteveryhour'] = 3600 * float(config.get(section, 'EveryHours'))
-                    confopts['verbose'] = eval(config.get(section, 'Verbose'))
         else:
             logger.error('Missing %s' % conffile)
             raise SystemExit(1)
