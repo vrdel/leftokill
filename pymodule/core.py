@@ -11,7 +11,6 @@ import time
 from leftokill import reportmail
 
 homeprefix = '/home/'
-logger = None
 reported, report_leftovers = set(), dict()
 
 def term_and_kill(candidate):

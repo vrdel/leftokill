@@ -1,0 +1,7 @@
+include config/*
+include exec/*
+include pymodule/*
+include simul/*
+include leftokill.spec
+
+recursive-exclude pymodule *.pyc
