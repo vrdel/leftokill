@@ -3,7 +3,7 @@
 Name:           leftokill
 Version:        0.1.0
 Release:        1%{?dist}.srce
-Summary:        Unix daemon that cleans the processes/threads left by the job scheduler
+Summary:        Unix daemon that cleans processes/threads left by the job scheduler
 Group:          System Environment/Daemons
 License:        GPL
 URL:            https://github.com/vrdel/leftokill 
@@ -27,7 +27,7 @@ Unix daemon that cleans the processes/threads left by the job scheduler
 
 %install
 rm -rf $RPM_BUILD_ROOT
-%{__python} setup.py install -O1 --skip-build --root $RPM_BUILD_ROOT --record=INSTALLED_FILES
+%{__python} setup.py install --skip-build --root $RPM_BUILD_ROOT --record=INSTALLED_FILES
 
 
 %clean
@@ -35,6 +35,7 @@ rm -rf $RPM_BUILD_ROOT
 
 
 %files -f INSTALLED_FILES
+%config(noreplace) %{_sysconfdir}/leftokill/leftokill.conf
 
 
 %changelog

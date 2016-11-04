@@ -12,7 +12,7 @@ rpm: dist
 dist:
 	rm -rf dist
 	python setup.py sdist
-	mv dist/${PKGNAME}-${PKGVERSION}.tar.gz .
+	mv -f dist/${PKGNAME}-${PKGVERSION}.tar.gz .
 	rm -rf dist
 
 sources: dist
