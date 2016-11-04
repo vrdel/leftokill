@@ -4,4 +4,4 @@ include pymodule/*
 include simul/*
 include leftokill.spec
 
-recursive-exclude pymodule *.pyc
+recursive-exclude pymodule *.pyc *.pyo

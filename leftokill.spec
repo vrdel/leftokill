@@ -10,6 +10,7 @@ URL:            https://github.com/vrdel/leftokill
 Source0:        leftokill-%{version}.tar.gz
 BuildRoot:      %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 BuildArch:      noarch 
+BuildRequires:  python2-devel
 Requires:       python-psutil 
 
 
@@ -28,7 +29,7 @@ Unix daemon that cleans the processes/threads left by the job scheduler
 %install
 rm -rf $RPM_BUILD_ROOT
 %{__python} setup.py install --skip-build --root $RPM_BUILD_ROOT --record=INSTALLED_FILES
-
+install --directory --mode 755 $RPM_BUILD_ROOT/%{_localstatedir}/log/leftokill/
 
 %clean
 rm -rf $RPM_BUILD_ROOT
@@ -36,7 +37,8 @@ rm -rf $RPM_BUILD_ROOT
 
 %files -f INSTALLED_FILES
 %config(noreplace) %{_sysconfdir}/leftokill/leftokill.conf
-
+%{python_sitelib}/leftokill/*.py[co]
+%dir %{_localstatedir}/log/leftokill/
 
 %changelog
 * Fri Nov 4 2016 Daniel Vrcic <dvrcic@srce.hr> - 0.1.0-1%{?dist}
