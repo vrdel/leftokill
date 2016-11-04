@@ -11,6 +11,7 @@ conffile = '/etc/leftokill/leftokill.conf'
 def main():
     lobj = log.Logger()
     logger = lobj.get()
+    loghandle = None
 
     confopts = config.parse_config(conffile, logger)
 
@@ -19,6 +20,7 @@ def main():
             lobj.init_syslog()
         if l.lower() == 'file':
             lobj.init_filelog()
+            loghandle = lobj.loghandle
 
     parser = argparse.ArgumentParser()
     parser.add_argument('-n', dest='nofork', action='store_true',
@@ -33,6 +35,10 @@ def main():
             raise SystemExit(1)
     else:
         context_daemon = daemon.DaemonContext()
+
+        if loghandle:
+            context_daemon.files_preserve = [loghandle]
+
         with context_daemon:
             core.run(confopts, logger)
 

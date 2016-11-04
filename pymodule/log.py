@@ -32,6 +32,7 @@ class Logger(object):
         lv = logging.INFO
 
         sf = logging.handlers.RotatingFileHandler(logfile, maxBytes=1024*1024, backupCount=5)
+        self.loghandle = sf.stream
         sf.setFormatter(lf)
         sf.setLevel(lv)
         self.logger.addHandler(sf)
