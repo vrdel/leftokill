@@ -112,6 +112,9 @@ def build_report_syslog(leftovers, confopts):
     for tr in torepkeys:
         report_syslog.update({tr: leftovers[tr]})
 
+    if report_syslog and confopts['noexec']:
+        msg.append('NoExecute mode')
+
     for e in report_syslog.itervalues():
         msg.append(e['msg']['candidate'])
         for l in e['msg']['main']:

@@ -25,7 +25,10 @@ class Report(threading.Thread):
         msg = MIMEText(self._report_payload(report_email))
         msg['From'] = self.confopt['reportfrom']
         msg['To'] = self.confopt['reportto']
-        msg['Subject'] = 'Leftokill'
+        if self.confopt['noexec']:
+            msg['Subject'] = 'Leftokill - NoExecute'
+        else:
+            msg['Subject'] = 'Leftokill'
 
         return msg.as_string()
 
@@ -49,7 +52,7 @@ class Report(threading.Thread):
                 self.lock.acquire()
 
                 if self._send_email():
-                    self.logger.info('Sent report with %d killed leftovers' % (len(self.leftovers)))
+                    self.logger.info('Sent report with %d leftovers' % (len(self.leftovers)))
 
                     if self.confopt['noexec'] == False:
                         self.leftovers.clear()
