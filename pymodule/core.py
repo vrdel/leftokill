@@ -128,7 +128,7 @@ def run(confopts, logger):
     lock = threading.Lock()
 
     if confopts['sendreport'] == True:
-        rth = reportmail.Report(logger, lock, report_leftovers, confopts)
+        rth = reportmail.Report(logger, lock, report_leftovers, reported, confopts)
         rth.start()
 
     while True:
@@ -150,6 +150,7 @@ def run(confopts, logger):
 
         if confopts['sendreport'] == False:
             report_leftovers.clear()
+            reported.clear()
 
         lock.release()
 

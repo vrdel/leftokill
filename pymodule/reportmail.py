@@ -53,15 +53,17 @@ class Report(threading.Thread):
 
                     if self.confopt['noexec'] == False:
                         self.leftovers.clear()
+                        self.reported.clear()
 
                     self.lock.release()
 
             time.sleep(self.confopt['reporteveryhour'])
 
-    def __init__(self, logger, lock, leftovers, confopt):
+    def __init__(self, logger, lock, leftovers, reported, confopt):
         self.logger = logger
         self.lock = lock
         self.leftovers = leftovers
+        self.reported = reported
         self.confopt = confopt
         threading.Thread.__init__(self)
         self.daemon = True
