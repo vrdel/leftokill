@@ -5,6 +5,7 @@ from leftokill import core
 from leftokill import log
 import argparse
 import daemon
+import daemon.pidlockfile
 import signal
 import threading
 
@@ -43,6 +44,8 @@ def main():
     else:
         context_daemon = daemon.DaemonContext()
 
+        context_daemon.pidfile = daemon.pidlockfile.PIDLockFile('/var/run/leftokill.pid')
+
         if loghandle:
             context_daemon.files_preserve = [loghandle]
 
@@ -54,6 +57,7 @@ def main():
             signal.SIGTERM: sigtermhandle
         }
 
+        context_daemon.open()
         with context_daemon:
             core.run(confopts, logger, events)
 
