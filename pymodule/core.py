@@ -5,6 +5,7 @@ import psutil
 import pwd
 import socket
 import sys
+import signal
 import threading
 import time
 
@@ -12,6 +13,7 @@ from leftokill import reportmail
 
 homeprefix = '/home/'
 reported, report_leftovers = set(), dict()
+
 
 def term_and_kill(candidate):
     cgone, calive, pgone, palive = list(), list(), list(), list()
@@ -40,6 +42,7 @@ def term_and_kill(candidate):
 
     return cgone, calive, pgone, palive
 
+
 def find_candidates():
     pt = psutil.process_iter()
     candidate_list = list()
@@ -52,6 +55,7 @@ def find_candidates():
                 candidate_list.append(p)
 
     return candidate_list
+
 
 def build_report_leftovers(cand=None, pgone=list(), palive=list(), cgone=list(), calive=list()):
     global report_leftovers
@@ -101,6 +105,7 @@ def build_report_leftovers(cand=None, pgone=list(), palive=list(), cgone=list(),
             rmsg = 'SIGKILL CHILD - PID:%d' % (c.pid)
             report_leftovers[p.pid]['msg']['childs'].append(rmsg)
 
+
 def build_report_syslog(leftovers, confopts):
     global reported
     report_syslog, torepkeys, msg = dict(), list(), list()
@@ -126,12 +131,16 @@ def build_report_syslog(leftovers, confopts):
 
     return msg
 
-def run(confopts, logger):
+
+def run(confopts, logger, events):
     global report_leftovers
     lock = threading.Lock()
+    termev = threading.Event()
 
-    if confopts['sendreport'] == True:
-        rth = reportmail.Report(logger, lock, report_leftovers, reported, confopts)
+    if confopts['sendreport']:
+        events.update({'flushonterm': threading.Event()})
+        rth = reportmail.Report(logger, lock, events, report_leftovers,
+                                reported, confopts)
         rth.start()
 
     while True:
@@ -156,5 +165,13 @@ def run(confopts, logger):
             reported.clear()
 
         lock.release()
+
+        if events['term'].isSet():
+            if confopts['sendreport']:
+                events['flushonterm'].set()
+                rth.join()
+            logger.info('Exit from run()')
+            events['term'].clear()
+            raise SystemExit(1)
 
         time.sleep(confopts['killeverysec'])

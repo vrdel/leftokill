@@ -5,13 +5,20 @@ from leftokill import core
 from leftokill import log
 import argparse
 import daemon
+import signal
+import threading
 
 conffile = '/etc/leftokill/leftokill.conf'
+
 
 def main():
     lobj = log.Logger()
     logger = lobj.get()
     loghandle = None
+    events = dict()
+
+    termev = threading.Event()
+    events.update({'term': termev})
 
     confopts = config.parse_config(conffile, logger)
 
@@ -30,7 +37,7 @@ def main():
 
     if args.nofork:
         try:
-            core.run(confopts, logger)
+            core.run(confopts, logger, events)
         except KeyboardInterrupt:
             raise SystemExit(1)
     else:
@@ -39,7 +46,15 @@ def main():
         if loghandle:
             context_daemon.files_preserve = [loghandle]
 
+        def sigtermhandle(signum, frame):
+            logger.info('Received SIGTERM')
+            events['term'].set()
+
+        context_daemon.signal_map = {
+            signal.SIGTERM: sigtermhandle
+        }
+
         with context_daemon:
-            core.run(confopts, logger)
+            core.run(confopts, logger, events)
 
 main()
