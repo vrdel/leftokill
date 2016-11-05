@@ -143,6 +143,8 @@ def run(confopts, logger, events):
                                 reported, confopts)
         rth.start()
 
+    logger.info('Started: Report=%s NoExec=%s' % (confopts['sendreport'], confopts['noexec']))
+
     while True:
         lock.acquire(False)
 
