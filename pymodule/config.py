@@ -1,6 +1,13 @@
 import ConfigParser
 
 def parse_config(conffile, logger):
+    def multival_option(option):
+        if ',' in option:
+            val = map(lambda v: v.strip(), option.split(','))
+        else:
+            val = [option.strip()]
+        return val
+
     reqsections = set(['general', 'report'])
     confopts = dict()
 
@@ -17,11 +24,8 @@ def parse_config(conffile, logger):
                 if section.startswith('General'):
                     confopts['killeverysec'] = float(config.get(section, 'KillEverySec'))
                     confopts['noexec'] = eval(config.get(section, 'NoExecute'))
-                    val = config.get(section, 'LogMode')
-                    if ',' in val:
-                        confopts['logmode'] = map(lambda v: v.strip(), val.split(','))
-                    else:
-                        confopts['logmode'] = [val.strip()]
+                    confopts['logmode'] = multival_option(config.get(section, 'LogMode'))
+                    confopts['excludeusers'] = set(multival_option(config.get(section, 'ExcludeUsers')))
                 if section.startswith('Report'):
                     confopts['sendreport'] = eval(config.get(section, 'Send'))
                     confopts['reportto'] = config.get(section, 'To')

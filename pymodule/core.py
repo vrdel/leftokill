@@ -43,12 +43,12 @@ def term_and_kill(candidate):
     return cgone, calive, pgone, palive
 
 
-def find_candidates():
+def find_candidates(excusers):
     pt = psutil.process_iter()
     candidate_list = list()
 
     for p in pt:
-        if p.ppid() == 1:
+        if p.ppid() == 1 and p.username() not in excusers:
             homedir = pwd.getpwnam(p.username())[5]
 
             if homedir.startswith(homeprefix):
@@ -148,7 +148,7 @@ def run(confopts, logger, events):
     while True:
         lock.acquire(False)
 
-        candidate_list = find_candidates()
+        candidate_list = find_candidates(confopts['excludeusers'])
 
         if candidate_list:
             for cand in candidate_list:
