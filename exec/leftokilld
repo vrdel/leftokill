@@ -13,6 +13,40 @@ import threading
 conffile = '/etc/leftokill/leftokill.conf'
 pidfile = '/var/run/leftokill.pid'
 
+def daemon_start(context_daemon, logger, loghandle, events, confopts):
+    if context_daemon.pidfile.is_locked() and not \
+            context_daemon.pidfile.i_am_locking():
+        logger.error('Another instance is running (%s)' % \
+                    context_daemon.pidfile.read_pid())
+        raise SystemExit(1)
+
+    if loghandle:
+        context_daemon.files_preserve = [loghandle]
+
+    def sigtermhandle(signum, frame):
+        logger.info('Received SIGTERM')
+        events['term'].set()
+
+    context_daemon.signal_map = {
+        signal.SIGTERM: sigtermhandle
+    }
+
+    context_daemon.open()
+    with context_daemon:
+        core.run(confopts, logger, events)
+
+def daemon_stop(context_daemon):
+    if context_daemon.pidfile.is_locked() and not \
+            context_daemon.pidfile.i_am_locking():
+        pid = context_daemon.pidfile.read_pid()
+        try:
+            os.kill(pid, signal.SIGTERM)
+        except OSError as e:
+            logger.error(e)
+            return False
+
+    return True
+
 def main():
     lobj = log.Logger()
     logger = lobj.get()
@@ -50,36 +84,10 @@ def main():
         context_daemon.pidfile = daemon.pidlockfile.PIDLockFile(pidfile)
 
         if args.daemon == 'start':
-            if context_daemon.pidfile.is_locked() and not \
-                    context_daemon.pidfile.i_am_locking():
-                logger.error('Another instance is running (%s)' % \
-                            context_daemon.pidfile.read_pid())
-                raise SystemExit(1)
-
-            if loghandle:
-                context_daemon.files_preserve = [loghandle]
-
-            def sigtermhandle(signum, frame):
-                logger.info('Received SIGTERM')
-                events['term'].set()
-
-            context_daemon.signal_map = {
-                signal.SIGTERM: sigtermhandle
-            }
-
-            context_daemon.open()
-            with context_daemon:
-                core.run(confopts, logger, events)
+            daemon_start(context_daemon, logger, loghandle, events, confopts)
 
         elif args.daemon == 'stop':
-            if context_daemon.pidfile.is_locked() and not \
-                    context_daemon.pidfile.i_am_locking():
-                pid = context_daemon.pidfile.read_pid()
-                try:
-                    os.kill(pid, signal.SIGTERM)
-                except OSError as e:
-                    logger.error(e)
-                    raise SystemExit(1)
-
+            if not daemon_stop(context_daemon):
+                raise SystemExit(1)
 
 main()
