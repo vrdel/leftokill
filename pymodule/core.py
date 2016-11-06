@@ -172,7 +172,7 @@ def run(confopts, logger, events):
             if confopts['sendreport']:
                 events['flushonterm'].set()
                 rth.join()
-            logger.info('Exit from run()')
+            logger.info('Exit')
             events['term'].clear()
             raise SystemExit(0)
 

@@ -62,13 +62,12 @@ def main():
             def sigtermhandle(signum, frame):
                 logger.info('Received SIGTERM')
                 events['term'].set()
-                logger.info('Exit')
-                raise SystemExit(signum)
 
             context_daemon.signal_map = {
                 signal.SIGTERM: sigtermhandle
             }
 
+            context_daemon.open()
             with context_daemon:
                 core.run(confopts, logger, events)
 
