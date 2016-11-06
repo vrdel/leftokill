@@ -174,5 +174,6 @@ def run(confopts, logger, events):
                 rth.join()
             logger.info('Exit from run()')
             events['term'].clear()
+            raise SystemExit(0)
 
         time.sleep(confopts['killeverysec'])

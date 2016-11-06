@@ -6,6 +6,7 @@ from leftokill import log
 import argparse
 import daemon
 import daemon.pidlockfile
+import os
 import signal
 import threading
 
@@ -43,12 +44,12 @@ def main():
             core.run(confopts, logger, events)
         except KeyboardInterrupt:
             raise SystemExit(1)
-    else:
+
+    elif args.daemon:
+        context_daemon = daemon.DaemonContext()
+        context_daemon.pidfile = daemon.pidlockfile.PIDLockFile(pidfile)
+
         if args.daemon == 'start':
-            context_daemon = daemon.DaemonContext()
-
-            context_daemon.pidfile = daemon.pidlockfile.PIDLockFile(pidfile)
-
             if context_daemon.pidfile.is_locked() and not \
                     context_daemon.pidfile.i_am_locking():
                 logger.error('Another instance is running (%s)' % \
@@ -61,6 +62,7 @@ def main():
             def sigtermhandle(signum, frame):
                 logger.info('Received SIGTERM')
                 events['term'].set()
+                logger.info('Exit')
                 raise SystemExit(signum)
 
             context_daemon.signal_map = {
@@ -69,5 +71,16 @@ def main():
 
             with context_daemon:
                 core.run(confopts, logger, events)
+
+        elif args.daemon == 'stop':
+            if context_daemon.pidfile.is_locked() and not \
+                    context_daemon.pidfile.i_am_locking():
+                pid = context_daemon.pidfile.read_pid()
+                try:
+                    os.kill(pid, signal.SIGTERM)
+                except OSError as e:
+                    logger.error(e)
+                    raise SystemExit(1)
+
 
 main()
