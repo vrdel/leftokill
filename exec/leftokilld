@@ -8,6 +8,7 @@ import daemon
 import daemon.pidlockfile
 import os
 import signal
+import time
 import threading
 
 conffile = '/etc/leftokill/leftokill.conf'
@@ -31,14 +32,16 @@ def daemon_start(context_daemon, logger, loghandle, events, confopts):
         signal.SIGTERM: sigtermhandle
     }
 
+    logger.info('Starting instance')
     context_daemon.open()
     with context_daemon:
         core.run(confopts, logger, events)
 
-def daemon_stop(context_daemon):
+def daemon_stop(context_daemon, logger):
     if context_daemon.pidfile.is_locked() and not \
             context_daemon.pidfile.i_am_locking():
         pid = context_daemon.pidfile.read_pid()
+        logger.info('Stopping instance (%s)' % pid)
         try:
             os.kill(pid, signal.SIGTERM)
         except OSError as e:
@@ -87,7 +90,14 @@ def main():
             daemon_start(context_daemon, logger, loghandle, events, confopts)
 
         elif args.daemon == 'stop':
-            if not daemon_stop(context_daemon):
+            if not daemon_stop(context_daemon, logger):
                 raise SystemExit(1)
+
+        elif args.daemon == 'restart':
+            logger.info('Restarting')
+            daemon_stop(context_daemon, logger)
+            time.sleep(2)
+            daemon_start(context_daemon, logger, loghandle, events, confopts)
+
 
 main()
