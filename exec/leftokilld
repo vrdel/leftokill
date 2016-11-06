@@ -10,7 +10,7 @@ import signal
 import threading
 
 conffile = '/etc/leftokill/leftokill.conf'
-
+pidfile = '/var/run/leftokill.pid'
 
 def main():
     lobj = log.Logger()
@@ -30,10 +30,12 @@ def main():
             lobj.init_filelog()
             loghandle = lobj.loghandle
 
-    parser = argparse.ArgumentParser()
-    parser.add_argument('-n', dest='nofork', action='store_true',
-                        help="do not fork into background",
-                        required=False)
+    parser = argparse.ArgumentParser(prog='leftokilld')
+    group = parser.add_mutually_exclusive_group(required=True)
+    group.add_argument('-n', dest='nofork', action='store_true',
+                        help='do not fork into background')
+    group.add_argument('-d', dest='daemon', type=str,
+                       help='daemon arguments: start, stop, restart', metavar='')
     args = parser.parse_args()
 
     if args.nofork:
@@ -42,23 +44,30 @@ def main():
         except KeyboardInterrupt:
             raise SystemExit(1)
     else:
-        context_daemon = daemon.DaemonContext()
+        if args.daemon == 'start':
+            context_daemon = daemon.DaemonContext()
 
-        context_daemon.pidfile = daemon.pidlockfile.PIDLockFile('/var/run/leftokill.pid')
+            context_daemon.pidfile = daemon.pidlockfile.PIDLockFile(pidfile)
 
-        if loghandle:
-            context_daemon.files_preserve = [loghandle]
+            if context_daemon.pidfile.is_locked() and not \
+                    context_daemon.pidfile.i_am_locking():
+                logger.error('Another instance is running (%s)' % \
+                            context_daemon.pidfile.read_pid())
+                raise SystemExit(1)
 
-        def sigtermhandle(signum, frame):
-            logger.info('Received SIGTERM')
-            events['term'].set()
+            if loghandle:
+                context_daemon.files_preserve = [loghandle]
 
-        context_daemon.signal_map = {
-            signal.SIGTERM: sigtermhandle
-        }
+            def sigtermhandle(signum, frame):
+                logger.info('Received SIGTERM')
+                events['term'].set()
+                raise SystemExit(signum)
 
-        context_daemon.open()
-        with context_daemon:
-            core.run(confopts, logger, events)
+            context_daemon.signal_map = {
+                signal.SIGTERM: sigtermhandle
+            }
+
+            with context_daemon:
+                core.run(confopts, logger, events)
 
 main()
