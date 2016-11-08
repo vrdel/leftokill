@@ -24,6 +24,7 @@ setup(
     url = 'https://github.com/vrdel/leftokill',
     package_dir = {'leftokill': 'pymodule/'},
     packages = ['leftokill'],
-    data_files = [('/etc/leftokill', glob.glob('config/*.conf')),],
+    data_files = [('/etc/leftokill', glob.glob('config/*.conf')),
+                  ('/etc/init.d/', glob.glob('init/leftokill'))],
     scripts = glob.glob('exec/*') + glob.glob('simul/*')
     )

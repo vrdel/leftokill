@@ -1,0 +1,31 @@
+#!/bin/bash
+# leftokill daemon
+# chkconfig: 345 20 80
+# description: leftokill daemon
+# processname: leftokilld 
+
+. /etc/rc.d/init.d/functions
+PROG_NAME="leftokilld"
+DAEMON_PATH="/usr/bin/leftokilld"
+
+case "$1" in
+start)
+	echo -n $"Starting $PROG_NAME: "
+	daemon $DAEMON_PATH -d start
+	echo
+;;
+stop)
+	echo -n $"Stopping $PROG_NAME: "
+	daemon $DAEMON_PATH -d stop
+	echo
+;;
+restart)
+	echo -n $"Restarting $PROG_NAME: "
+	daemon $DAEMON_PATH -d restart
+	echo
+;;
+*)
+	echo "Usage: $0 {start|stop|restart}"
+	exit 1
+esac
+
