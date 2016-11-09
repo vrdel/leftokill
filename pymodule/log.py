@@ -9,7 +9,7 @@ class Logger(object):
     logger = None
 
     def _init_stdout(self):
-        lfs = '%(name)s: %(levelname)s %(message)s'
+        lfs = '%(levelname)s %(message)s'
         lf = logging.Formatter(lfs)
         lv = logging.INFO
 

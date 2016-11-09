@@ -11,7 +11,8 @@ Source0:        %{name}-%{version}.tar.gz
 BuildRoot:      %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 BuildArch:      noarch 
 BuildRequires:  python2-devel
-Requires:       python-psutil 
+Requires:       python-psutil >= 4.3
+Requires:       python-daemon
 
 
 %description
