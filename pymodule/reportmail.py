@@ -37,7 +37,8 @@ class Report(threading.Thread):
             s = smtplib.SMTP(self.confopt['reportsmtp'], 587, timeout=120)
             s.starttls()
             s.ehlo()
-            s.login(self.confopt['reportsmtplogin'], self.confopt['reportsmtppass'])
+            if self.confopt['reportsmtplogin'] and self.confopt['reportsmtppass']:
+                s.login(self.confopt['reportsmtplogin'], self.confopt['reportsmtppass'])
             s.sendmail(self.confopt['reportfrom'], [self.confopt['reportto']], self._report_email(self.leftovers))
             s.quit()
         except (socket.error, smtplib.SMTPException) as e:
