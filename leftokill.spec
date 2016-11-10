@@ -13,6 +13,7 @@ BuildArch:      noarch
 BuildRequires:  python2-devel
 Requires:       python-psutil >= 4.3
 Requires:       python-daemon
+Requires:       python-argparse
 
 
 %description
