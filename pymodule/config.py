@@ -26,6 +26,7 @@ def parse_config(conffile, logger):
                     confopts['noexec'] = eval(config.get(section, 'NoExecute'))
                     confopts['logmode'] = multival_option(config.get(section, 'LogMode'))
                     confopts['excludeusers'] = set(multival_option(config.get(section, 'ExcludeUsers')))
+                    confopts['excludeprocesses'] = set(multival_option(config.get(section, 'ExcludeProcesses')))
                 if section.startswith('Report'):
                     confopts['sendreport'] = eval(config.get(section, 'Send'))
                     confopts['reportto'] = config.get(section, 'To')

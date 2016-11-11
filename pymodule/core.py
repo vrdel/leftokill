@@ -3,9 +3,10 @@
 import datetime
 import psutil
 import pwd
+import re
+import signal
 import socket
 import sys
-import signal
 import threading
 import time
 
@@ -43,16 +44,21 @@ def term_and_kill(candidate):
     return cgone, calive, pgone, palive
 
 
-def find_candidates(excusers):
+def find_candidates(excusers, excprocess):
     pt = psutil.process_iter()
-    candidate_list = list()
+    candidate_list = set()
 
     for p in pt:
-        if p.ppid() == 1 and p.username() not in excusers:
+        if p.ppid() == 1:
             homedir = pwd.getpwnam(p.username())[5]
-
-            if homedir.startswith(homeprefix):
-                candidate_list.append(p)
+            if p.username() not in excusers:
+                if homedir.startswith(homeprefix):
+                    def fil(e):
+                        if re.search(e, ' '.join(p.cmdline())):
+                            return True
+                    if filter(fil, excprocess):
+                        continue
+                    candidate_list.add(p)
 
     return candidate_list
 
@@ -148,7 +154,8 @@ def run(confopts, logger, events):
     while True:
         lock.acquire(False)
 
-        candidate_list = find_candidates(confopts['excludeusers'])
+        candidate_list = find_candidates(confopts['excludeusers'],
+                                         confopts['excludeprocesses'])
 
         if candidate_list:
             for cand in candidate_list:
