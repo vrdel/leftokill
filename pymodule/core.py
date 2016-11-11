@@ -1,7 +1,6 @@
 import datetime
 import psutil
 import pwd
-import re
 import signal
 import socket
 import sys
@@ -52,7 +51,7 @@ def find_candidates(excusers, excprocess):
             if p.username() not in excusers:
                 if homedir.startswith(homeprefix):
                     def fil(e):
-                        if re.search(e, ' '.join(p.cmdline())):
+                        if e in ' '.join(p.cmdline()):
                             return True
                     if filter(fil, excprocess):
                         continue
