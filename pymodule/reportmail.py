@@ -25,10 +25,11 @@ class Report(threading.Thread):
         msg = MIMEText(self._report_payload(report_email))
         msg['From'] = self.confopt['reportfrom']
         msg['To'] = self.confopt['reportto']
+        node = '- ' + self.confopt['reportnode'] if self.confopt['reportnode'] else ''
         if self.confopt['noexec']:
-            msg['Subject'] = 'Leftokill - NoExecute'
+            msg['Subject'] = 'Leftokill - NoExecute %s' % node
         else:
-            msg['Subject'] = 'Leftokill'
+            msg['Subject'] = 'Leftokill %s' % node
 
         return msg.as_string()
 

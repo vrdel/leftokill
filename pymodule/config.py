@@ -28,13 +28,14 @@ def parse_config(conffile, logger):
                     confopts['excludeusers'] = set(multival_option(config.get(section, 'ExcludeUsers')))
                     confopts['excludeprocesses'] = set(multival_option(config.get(section, 'ExcludeProcesses')))
                 if section.startswith('Report'):
-                    confopts['sendreport'] = eval(config.get(section, 'Send'))
-                    confopts['reportto'] = config.get(section, 'To')
+                    confopts['reporteveryhour'] = 3600 * float(config.get(section, 'EveryHours'))
                     confopts['reportfrom'] = config.get(section, 'From')
+                    confopts['reportnode'] = config.get(section, 'Node')
                     confopts['reportsmtp'] = config.get(section, 'SMTP')
                     confopts['reportsmtplogin'] = config.get(section, 'SMTPLogin')
                     confopts['reportsmtppass'] = config.get(section, 'SMTPPass')
-                    confopts['reporteveryhour'] = 3600 * float(config.get(section, 'EveryHours'))
+                    confopts['reportto'] = config.get(section, 'To')
+                    confopts['sendreport'] = eval(config.get(section, 'Send'))
         else:
             logger.error('Missing %s' % conffile)
             raise SystemExit(1)
