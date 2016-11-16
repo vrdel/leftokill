@@ -7,21 +7,22 @@
 . /etc/rc.d/init.d/functions
 PROG_NAME="leftokilld"
 DAEMON_PATH="/usr/bin/leftokilld"
+NN="$(which tr) '\n' '\0'"
 
 case "$1" in
 start)
 	echo -n $"Starting $PROG_NAME: "
-	daemon $DAEMON_PATH -d start
+	daemon $DAEMON_PATH -d start | eval $NN
 	echo
 ;;
 stop)
 	echo -n $"Stopping $PROG_NAME: "
-	daemon $DAEMON_PATH -d stop
+	daemon $DAEMON_PATH -d stop | eval $NN
 	echo
 ;;
 restart)
 	echo -n $"Restarting $PROG_NAME: "
-	daemon $DAEMON_PATH -d restart
+	daemon $DAEMON_PATH -d restart | eval $NN
 	echo
 ;;
 *)
