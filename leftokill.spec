@@ -33,6 +33,19 @@ rm -rf $RPM_BUILD_ROOT
 %{__python} setup.py install --skip-build --root $RPM_BUILD_ROOT --record=INSTALLED_FILES
 install --directory --mode 755 $RPM_BUILD_ROOT/%{_localstatedir}/log/%{name}/
 
+
+%post
+/sbin/chkconfig --add leftokill
+
+
+%preun
+if [ "$1" = 0 ]; then
+  /sbin/service leftokill stop > /dev/null 2>&1
+  /sbin/chkconfig --del leftokill
+fi
+exit 0
+
+
 %clean
 rm -rf $RPM_BUILD_ROOT
 
