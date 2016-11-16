@@ -62,6 +62,16 @@ def daemon_stop(context_daemon, logger, restart=False):
         logger.error('Instance not running')
         raise SystemExit(1)
 
+def daemon_status(context_daemon, logger):
+    if context_daemon.pidfile.is_locked() and not \
+            context_daemon.pidfile.i_am_locking():
+        pid = context_daemon.pidfile.read_pid()
+        process = psutil.Process(pid=pid)
+        if process:
+            logger.info('Instance is running (%s)' % pid)
+    else:
+        logger.info('Instance is not running')
+
 def main():
     lobj = log.Logger()
     logger = lobj.get()
@@ -85,7 +95,7 @@ def main():
     group.add_argument('-n', dest='nofork', action='store_true',
                         help='do not fork into background')
     group.add_argument('-d', dest='daemon', type=str,
-                       help='daemon arguments: start, stop, restart', metavar='')
+                       help='daemon arguments: start, stop, restart, status', metavar='')
     args = parser.parse_args()
 
     if args.nofork:
@@ -108,5 +118,7 @@ def main():
             daemon_stop(context_daemon, logger, restart=True)
             daemon_start(context_daemon, logger, loghandle, events, confopts, restart=True)
 
+        elif args.daemon == 'status':
+            daemon_status(context_daemon, logger)
 
 main()

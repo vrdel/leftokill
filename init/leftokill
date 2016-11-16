@@ -25,8 +25,13 @@ restart)
 	daemon $DAEMON_PATH -d restart | eval $NN
 	echo
 ;;
+status)
+	echo -n $"Status $PROG_NAME: "
+	daemon $DAEMON_PATH -d status | eval $NN
+	echo
+;;
 *)
-	echo "Usage: $0 {start|stop|restart}"
+	echo "Usage: $0 {start|stop|restart|status}"
 	exit 1
 esac
 
