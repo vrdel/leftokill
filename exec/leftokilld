@@ -3,19 +3,20 @@
 from leftokill import config
 from leftokill import core
 from leftokill import log
+
 import argparse
 import daemon
 import daemon.pidlockfile
-import psutil
 import os
+import psutil
 import signal
-import time
 import threading
+import time
 
 conffile = '/etc/leftokill/leftokill.conf'
 pidfile = '/var/run/leftokill.pid'
 
-def daemon_start(context_daemon, logger, loghandle, events, confopts):
+def daemon_start(context_daemon, logger, loghandle, events, confopts, restart=False):
     if context_daemon.pidfile.is_locked() and not \
             context_daemon.pidfile.i_am_locking():
         logger.error('Another instance is running (%s)' % \
@@ -33,23 +34,33 @@ def daemon_start(context_daemon, logger, loghandle, events, confopts):
         signal.SIGTERM: sigtermhandle
     }
 
-    logger.info('Starting instance')
+    if not restart:
+        logger.info('Started instance')
+
     context_daemon.open()
     with context_daemon:
         core.run(confopts, logger, events)
 
-def daemon_stop(context_daemon, logger):
+def daemon_stop(context_daemon, logger, restart=False):
     if context_daemon.pidfile.is_locked() and not \
             context_daemon.pidfile.i_am_locking():
         pid = context_daemon.pidfile.read_pid()
         process = psutil.Process(pid=pid)
-        logger.info('Stopping instance (%s)' % pid)
+
+        if not restart:
+            logger.info('Stopping instance (%s)' % pid)
+
         process.terminate()
         pgone, palive = psutil.wait_procs([process])
 
         for p in palive:
             p.kill()
 
+        if not restart:
+            raise SystemExit(0)
+    else:
+        logger.error('Instance not running')
+        raise SystemExit(1)
 
 def main():
     lobj = log.Logger()
@@ -91,13 +102,11 @@ def main():
             daemon_start(context_daemon, logger, loghandle, events, confopts)
 
         elif args.daemon == 'stop':
-            if not daemon_stop(context_daemon, logger):
-                raise SystemExit(1)
+            daemon_stop(context_daemon, logger)
 
         elif args.daemon == 'restart':
-            logger.info('Restarting')
-            daemon_stop(context_daemon, logger)
-            daemon_start(context_daemon, logger, loghandle, events, confopts)
+            daemon_stop(context_daemon, logger, restart=True)
+            daemon_start(context_daemon, logger, loghandle, events, confopts, restart=True)
 
 
 main()
