@@ -50,7 +50,6 @@ def daemon_stop(context_daemon, logger):
         for p in palive:
             p.kill()
 
-        raise SystemExit(0)
 
 def main():
     lobj = log.Logger()
