@@ -51,6 +51,5 @@ def main():
 
     with d:
         daemonfunc()
-    #daemonfunc()
 
 main()
