@@ -15,28 +15,22 @@ Requires:       python-psutil >= 4.3
 Requires:       python-daemon
 Requires:       python-argparse
 
-
 %description
 Unix daemon that cleans the processes/threads left by the job scheduler
-
 
 %prep
 %setup -q
 
-
 %build
 %{__python} setup.py build
-
 
 %install
 rm -rf $RPM_BUILD_ROOT
 %{__python} setup.py install --skip-build --root $RPM_BUILD_ROOT --record=INSTALLED_FILES
 install --directory --mode 755 $RPM_BUILD_ROOT/%{_localstatedir}/log/%{name}/
 
-
 %post
 /sbin/chkconfig --add leftokill
-
 
 %preun
 if [ "$1" = 0 ]; then
@@ -45,10 +39,8 @@ if [ "$1" = 0 ]; then
 fi
 exit 0
 
-
 %clean
 rm -rf $RPM_BUILD_ROOT
-
 
 %files -f INSTALLED_FILES
 %config(noreplace) %{_sysconfdir}/%{name}/%{name}.conf
