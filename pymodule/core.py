@@ -63,6 +63,9 @@ def find_candidates(excusers, excprocess):
 def build_report_leftovers(cand=None, pgone=list(), palive=list(), cgone=list(), calive=list()):
     global report_leftovers
 
+    def extract_creattime(cand):
+        return datetime.datetime.fromtimestamp(cand.create_time()).strftime("%Y-%m-%d %H:%M:%S")
+
     def bytes2human(n):
         symbols = ('K', 'M', 'G', 'T', 'P', 'E', 'Z', 'Y')
         prefix = {}
@@ -79,34 +82,39 @@ def build_report_leftovers(cand=None, pgone=list(), palive=list(), cgone=list(),
 
     if cand:
         proc_childs = cand.children(recursive=True)
-        report_leftovers[cand.pid] = dict({'name': cand.name(), 'username': cand.username(), 'nchilds': len(proc_childs),
+        keytime = extract_creattime(cand)
+        report_leftovers[keytime] = dict({'name': cand.name(), 'username': cand.username(), 'nchilds': len(proc_childs),
                                     'created': datetime.datetime.fromtimestamp(cand.create_time()).strftime("%Y-%m-%d %H:%M:%S"),
                                     'status': cand.status(), 'cpuuser': cand.cpu_times()[0], 'cpusys': cand.cpu_times()[1],
                                     'rss': bytes2human(cand.memory_info()[0]), 'cmdline': ' '.join(cand.cmdline())})
 
-        report_leftovers[cand.pid]['msg'] = dict({'candidate': 'PID:%d Candidate:%s User:%s Created:%s Status:%s Childs:%d CPU:user=%s, sys=%s Memory:RSS=%s CMD:%s' \
-                    % (cand.pid, report_leftovers[cand.pid]['name'], report_leftovers[cand.pid]['username'], report_leftovers[cand.pid]['created'],
-                        report_leftovers[cand.pid]['status'], report_leftovers[cand.pid]['nchilds'], report_leftovers[cand.pid]['cpuuser'],
-                        report_leftovers[cand.pid]['cpusys'], report_leftovers[cand.pid]['rss'], report_leftovers[cand.pid]['cmdline'])})
-        report_leftovers[cand.pid]['msg'].update(dict({'main': list()}))
-        report_leftovers[cand.pid]['msg'].update(dict({'childs': list()}))
+        report_leftovers[keytime]['msg'] = dict({'candidate': 'PID:%d Candidate:%s User:%s Created:%s Status:%s Childs:%d CPU:user=%s, sys=%s Memory:RSS=%s CMD:%s' \
+                    % (cand.pid, report_leftovers[keytime]['name'], report_leftovers[keytime]['username'], report_leftovers[keytime]['created'],
+                        report_leftovers[keytime]['status'], report_leftovers[keytime]['nchilds'], report_leftovers[keytime]['cpuuser'],
+                        report_leftovers[keytime]['cpusys'], report_leftovers[keytime]['rss'], report_leftovers[keytime]['cmdline'])})
+        report_leftovers[keytime]['msg'].update(dict({'main': list()}))
+        report_leftovers[keytime]['msg'].update(dict({'childs': list()}))
 
     else:
         for p in pgone:
+            keytime = extract_creattime(p)
             rmsg = 'SIGTERM - PID:%d Returncode:%s' % (p.pid, p.returncode)
-            report_leftovers[p.pid]['msg']['main'].append(rmsg)
+            report_leftovers[keytime]['msg']['main'].append(rmsg)
 
         for p in palive:
-            rmsg = 'SIGKILL - PID:%d' % (p.pid )
-            report_leftovers[p.pid]['msg']['main'].append(rmsg)
+            keytime = extract_creattime(p)
+            rmsg = 'SIGKILL - PID:%d' % (p.pid)
+            report_leftovers[keytime]['msg']['main'].append(rmsg)
 
         for c in cgone:
+            keytime = extract_creattime(p)
             rmsg = 'SIGTERM CHILD - PID:%d Returncode:%s' % (c.pid, c.returncode)
-            report_leftovers[p.pid]['msg']['childs'].append(rmsg)
+            report_leftovers[keytime]['msg']['childs'].append(rmsg)
 
         for c in calive:
+            keytime = extract_creattime(p)
             rmsg = 'SIGKILL CHILD - PID:%d' % (c.pid)
-            report_leftovers[p.pid]['msg']['childs'].append(rmsg)
+            report_leftovers[keytime]['msg']['childs'].append(rmsg)
 
 
 def build_report_syslog(leftovers, confopts):
