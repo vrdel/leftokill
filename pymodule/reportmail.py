@@ -10,9 +10,10 @@ class Report(threading.Thread):
     def _report_payload(self, report_entry):
         execmode = ''
         if self.confopt['noexec']:
-            execmode = 'NoExecute mode - '
+            execmode = '[NoExecute mode] - '
 
-        report_string = 'Report - %s' % (execmode) + str(datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')) + '\n'
+        report_string = 'Report (every %.1fh) - %s' % (self.confopt['reporteveryhour']/3600, \
+                                                       (execmode) + str(datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')) + '\n')
         for e in report_entry.itervalues():
             report_string += '\n' + e['msg']['candidate'] + '\n'
             for l in e['msg']['main']:
@@ -29,11 +30,11 @@ class Report(threading.Thread):
         if self.confopt['noexec']:
             num = len(report_email)
             prstr = 'process' if num == 1 else 'processes'
-            msg['Subject'] = 'leftokill - NoExecute %s - %d %s to clean' % (node, len(report_email), prstr)
+            msg['Subject'] = 'leftokill(NoExec) %s: %d %s to clean' % (node, len(report_email), prstr)
         else:
             num = len(report_email)
             prstr = 'process' if num == 1 else 'processes'
-            msg['Subject'] = 'leftokill %s - %d %s cleaned' % (node, len(report_email), prstr)
+            msg['Subject'] = 'leftokill %s: %d %s cleaned' % (node, len(report_email), prstr)
 
         return msg.as_string()
 
