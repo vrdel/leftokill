@@ -12,23 +12,36 @@ NN="$(which tr) '\n' '\0'"
 case "$1" in
 start)
 	echo -n $"Starting $PROG_NAME: "
-	daemon $DAEMON_PATH -d start | eval $NN
+	msg=$(daemon $DAEMON_PATH -d start)
+	retval=$?
+	echo $msg | eval $NN
 	echo
+	exit $retval
 ;;
 stop)
 	echo -n $"Stopping $PROG_NAME: "
-	daemon $DAEMON_PATH -d stop | eval $NN
+	msg=$(daemon $DAEMON_PATH -d stop)
+	retval=$?
+	echo $msg | eval $NN
 	echo
+	exit $retval
 ;;
 restart)
 	echo -n $"Restarting $PROG_NAME: "
-	daemon $DAEMON_PATH -d restart | eval $NN
+	msg=$(daemon $DAEMON_PATH -d restart)
+	retval=$?
+	echo $msg | eval $NN
 	echo
+	exit $retval
 ;;
 status)
 	echo -n $"Status $PROG_NAME: "
-	daemon $DAEMON_PATH -d status | eval $NN
+	msg=$(daemon $DAEMON_PATH -d status)
+	retval=$?
+	echo $retval
+	echo $msg | eval $NN
 	echo
+	exit $retval
 ;;
 *)
 	echo "Usage: $0 {start|stop|restart|status}"
