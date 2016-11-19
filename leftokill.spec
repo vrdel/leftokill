@@ -40,14 +40,19 @@ if [ "$1" = 0 ]; then
 fi
 exit 0
 
+%postun
+rm -rf %{_localstatedir}/run/%{name}/
+
 %clean
 rm -rf $RPM_BUILD_ROOT
 
 %files -f INSTALLED_FILES
-%config(noreplace) %{_sysconfdir}/%{name}/%{name}.conf
-%{python_sitelib}/%{name}/*.py[co]
+%config(noreplace) %attr(600,root,root) %{_sysconfdir}/%{name}/%{name}.conf
+%dir %{python_sitelib}/%{name}/
 %dir %{_localstatedir}/log/%{name}/
 %dir %{_localstatedir}/run/%{name}/
+%{python_sitelib}/%{name}/*.py[co]
+%{_localstatedir}/run/%{name}/
 
 %changelog
 * Fri Nov 18 2016 Daniel Vrcic <dvrcic@srce.hr> - 0.1.1-1%{?dist}
