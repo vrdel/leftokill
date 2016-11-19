@@ -40,7 +40,6 @@ def term_and_kill(candidate):
 
     return cgone, calive, pgone, palive
 
-
 def find_candidates(excusers, excprocess):
     pt = psutil.process_iter()
     candidate_list = set()
@@ -50,15 +49,12 @@ def find_candidates(excusers, excprocess):
             homedir = pwd.getpwnam(p.username())[5]
             if p.username() not in excusers:
                 if homedir.startswith(homeprefix):
-                    def fil(e):
-                        if e in ' '.join(p.cmdline()):
-                            return True
-                    if filter(fil, excprocess):
+                    if excprocess and \
+                            filter(lambda e: e in ' '.join(p.cmdline()), excprocess):
                         continue
                     candidate_list.add(p)
 
     return candidate_list
-
 
 def build_report_leftovers(cand=None, pgone=list(), palive=list(), cgone=list(), calive=list()):
     global report_leftovers
@@ -116,7 +112,6 @@ def build_report_leftovers(cand=None, pgone=list(), palive=list(), cgone=list(),
             rmsg = 'SIGKILL CHILD - PID:%d' % (c.pid)
             report_leftovers[keytime]['msg']['childs'].append(rmsg)
 
-
 def build_report_syslog(leftovers, confopts):
     global reported
     report_syslog, torepkeys, msg = dict(), list(), list()
@@ -141,7 +136,6 @@ def build_report_syslog(leftovers, confopts):
     reported.update(leftovers.keys())
 
     return msg
-
 
 def run(confopts, logger, events):
     global report_leftovers

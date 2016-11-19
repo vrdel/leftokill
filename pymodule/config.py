@@ -5,7 +5,7 @@ def parse_config(conffile, logger):
         if ',' in option:
             val = map(lambda v: v.strip(), option.split(','))
         else:
-            val = [option.strip()]
+            val = [option.strip()] if option else None
         return val
 
     reqsections = set(['general', 'report'])
@@ -25,8 +25,10 @@ def parse_config(conffile, logger):
                     confopts['killeverysec'] = float(config.get(section, 'KillEverySec'))
                     confopts['noexec'] = eval(config.get(section, 'NoExecute'))
                     confopts['logmode'] = multival_option(config.get(section, 'LogMode'))
-                    confopts['excludeusers'] = set(multival_option(config.get(section, 'ExcludeUsers')))
-                    confopts['excludeprocesses'] = set(multival_option(config.get(section, 'ExcludeProcesses')))
+                    exusers = multival_option(config.get(section, 'ExcludeUsers'))
+                    confopts['excludeusers'] = set(exusers) if exusers else []
+                    exprocesses = multival_option(config.get(section, 'ExcludeProcesses'))
+                    confopts['excludeprocesses'] = set(exprocesses) if exprocesses else []
                 if section.startswith('Report'):
                     confopts['reporteveryhour'] = 3600 * float(config.get(section, 'EveryHours'))
                     confopts['reportfrom'] = config.get(section, 'From')
