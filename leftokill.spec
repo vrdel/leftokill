@@ -2,7 +2,7 @@
 
 Name:           leftokill
 Version:        0.1.1
-Release:        1%{?dist}.srce
+Release:        2%{?dist}.srce
 Summary:        Unix daemon that cleans processes/threads left by the job scheduler
 Group:          System Environment/Daemons
 License:        GPL
@@ -55,6 +55,11 @@ rm -rf $RPM_BUILD_ROOT
 %{_localstatedir}/run/%{name}/
 
 %changelog
+* Sat Nov 19 2016 Daniel Vrcic <dvrcic@srce.hr> - 0.1.1-2%{?dist}
+- cleanup stale pidfile lock
+- fix handling of empty exclude options
+- init script returns proper exit codes
+- remove pidfile dir on pkg uninstall
 * Fri Nov 18 2016 Daniel Vrcic <dvrcic@srce.hr> - 0.1.1-1%{?dist}
 - num of leftovers in subject
 - use created time as key in leftovers structure
