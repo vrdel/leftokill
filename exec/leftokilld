@@ -14,14 +14,14 @@ import threading
 import time
 
 conffile = '/etc/leftokill/leftokill.conf'
-pidfile = '/var/run/leftokill.pid'
+pidfile = '/var/run/leftokill/pid'
 
 def daemon_start(context_daemon, logger, loghandle, events, confopts, restart=False):
     if context_daemon.pidfile.is_locked() and not \
             context_daemon.pidfile.i_am_locking():
-        logger.error('Another instance is running (%s)' % \
+        logger.info('Already running (%s)' % \
                     context_daemon.pidfile.read_pid())
-        raise SystemExit(1)
+        return 0
 
     if loghandle:
         context_daemon.files_preserve = [loghandle]
@@ -35,42 +35,53 @@ def daemon_start(context_daemon, logger, loghandle, events, confopts, restart=Fa
     }
 
     if not restart:
-        logger.info('Started instance')
+        logger.info('Started')
 
     context_daemon.open()
     with context_daemon:
         core.run(confopts, logger, events)
 
 def daemon_stop(context_daemon, logger, restart=False):
-    if context_daemon.pidfile.is_locked() and not \
-            context_daemon.pidfile.i_am_locking():
+    if context_daemon.pidfile.is_locked():
         pid = context_daemon.pidfile.read_pid()
-        process = psutil.Process(pid=pid)
 
-        if not restart:
-            logger.info('Stopping instance (%s)' % pid)
+        try:
+            process = psutil.Process(pid=pid)
+        except psutil.NoSuchProcess:
+            context_daemon.pidfile.break_lock()
+            if not restart:
+                logger.info('Not running - cleaning stale pidfile')
+        else:
+            if not restart:
+                logger.info('Stopping (%s)' % pid)
 
-        process.terminate()
-        pgone, palive = psutil.wait_procs([process])
+            process.terminate()
+            pgone, palive = psutil.wait_procs([process])
 
-        for p in palive:
-            p.kill()
+            for p in palive:
+                p.kill()
 
-        if not restart:
-            raise SystemExit(0)
-    else:
-        logger.error('Instance not running')
-        raise SystemExit(1)
+    elif not restart:
+        logger.info('Not running')
+
+    return 0
 
 def daemon_status(context_daemon, logger):
     if context_daemon.pidfile.is_locked() and not \
             context_daemon.pidfile.i_am_locking():
         pid = context_daemon.pidfile.read_pid()
-        process = psutil.Process(pid=pid)
-        if process:
-            logger.info('Instance is running (%s)' % pid)
+
+        try:
+            process = psutil.Process(pid=pid)
+        except psutil.NoSuchProcess:
+            logger.info('Not running - stale pidfile')
+            return 1
+        else:
+            logger.info('Running (%s)' % pid)
+            return 0
     else:
-        logger.info('Instance is not running')
+        logger.info('Not running')
+        return 3
 
 def main():
     lobj = log.Logger()
@@ -106,19 +117,21 @@ def main():
 
     elif args.daemon:
         context_daemon = daemon.DaemonContext()
-        context_daemon.pidfile = daemon.pidlockfile.PIDLockFile(pidfile)
+        context_daemon.pidfile = daemon.pidlockfile.PIDLockFile(pidfile, threaded=False)
 
         if args.daemon == 'start':
             daemon_start(context_daemon, logger, loghandle, events, confopts)
 
         elif args.daemon == 'stop':
-            daemon_stop(context_daemon, logger)
+            ret = daemon_stop(context_daemon, logger)
+            raise SystemExit(ret)
 
         elif args.daemon == 'restart':
             daemon_stop(context_daemon, logger, restart=True)
             daemon_start(context_daemon, logger, loghandle, events, confopts, restart=True)
 
         elif args.daemon == 'status':
-            daemon_status(context_daemon, logger)
+            ret = daemon_status(context_daemon, logger)
+            raise SystemExit(ret)
 
 main()

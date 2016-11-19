@@ -28,6 +28,7 @@ Unix daemon that cleans the processes/threads left by the job scheduler
 rm -rf $RPM_BUILD_ROOT
 %{__python} setup.py install --skip-build --root $RPM_BUILD_ROOT --record=INSTALLED_FILES
 install --directory --mode 755 $RPM_BUILD_ROOT/%{_localstatedir}/log/%{name}/
+install --directory --mode 755 $RPM_BUILD_ROOT/%{_localstatedir}/run/%{name}/
 
 %post
 /sbin/chkconfig --add leftokill
@@ -46,6 +47,7 @@ rm -rf $RPM_BUILD_ROOT
 %config(noreplace) %{_sysconfdir}/%{name}/%{name}.conf
 %{python_sitelib}/%{name}/*.py[co]
 %dir %{_localstatedir}/log/%{name}/
+%dir %{_localstatedir}/run/%{name}/
 
 %changelog
 * Fri Nov 18 2016 Daniel Vrcic <dvrcic@srce.hr> - 0.1.1-1%{?dist}
