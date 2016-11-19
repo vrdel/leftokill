@@ -27,9 +27,13 @@ class Report(threading.Thread):
         msg['To'] = self.confopt['reportto']
         node = '- ' + self.confopt['reportnode'] if self.confopt['reportnode'] else ''
         if self.confopt['noexec']:
-            msg['Subject'] = 'leftokill - NoExecute %s - %d' % (node, len(report_email))
+            num = len(report_email)
+            prstr = 'process' if num == 1 else 'processes'
+            msg['Subject'] = 'leftokill - NoExecute %s - %d %s to clean' % (node, len(report_email), prstr)
         else:
-            msg['Subject'] = 'leftokill %s - %d' % (node, len(report_email))
+            num = len(report_email)
+            prstr = 'process' if num == 1 else 'processes'
+            msg['Subject'] = 'leftokill %s - %d %s cleaned' % (node, len(report_email), prstr)
 
         return msg.as_string()
 

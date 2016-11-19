@@ -38,7 +38,6 @@ status)
 	echo -n $"Status $PROG_NAME: "
 	msg=$(daemon $DAEMON_PATH -d status)
 	retval=$?
-	echo $retval
 	echo $msg | eval $NN
 	echo
 	exit $retval
