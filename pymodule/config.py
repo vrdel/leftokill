@@ -24,11 +24,23 @@ def parse_config(conffile, logger):
                 if section.startswith('General'):
                     confopts['killeverysec'] = float(config.get(section, 'KillEverySec'))
                     confopts['noexec'] = eval(config.get(section, 'NoExecute'))
+
                     confopts['logmode'] = multival_option(config.get(section, 'LogMode'))
+                    if confopts['logmode']:
+                        for l in confopts['logmode']:
+                            if 'syslog' != l.lower() and 'file' != l.lower():
+                                logger.error('Logmode allows only Syslog, File')
+                                raise SystemExit(1)
+                    else:
+                        logger.error('Logmode must define logger')
+                        raise SystemExit(1)
+
                     exusers = multival_option(config.get(section, 'ExcludeUsers'))
                     confopts['excludeusers'] = set(exusers) if exusers else []
+
                     exprocesses = multival_option(config.get(section, 'ExcludeProcesses'))
                     confopts['excludeprocesses'] = set(exprocesses) if exprocesses else []
+
                 if section.startswith('Report'):
                     confopts['reporteveryhour'] = 3600 * float(config.get(section, 'EveryHours'))
                     confopts['reportfrom'] = config.get(section, 'From')
@@ -39,6 +51,7 @@ def parse_config(conffile, logger):
                     confopts['reportto'] = config.get(section, 'To')
                     confopts['reportsmtpssl'] = eval(config.get(section, 'SMTPSSL'))
                     confopts['sendreport'] = eval(config.get(section, 'Send'))
+
         else:
             logger.error('Missing %s' % conffile)
             raise SystemExit(1)

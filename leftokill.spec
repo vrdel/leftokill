@@ -60,6 +60,7 @@ rm -rf $RPM_BUILD_ROOT
 - fix handling of empty exclude options
 - init script returns proper exit codes
 - remove pidfile dir on pkg uninstall
+- complain if no logger defined
 * Fri Nov 18 2016 Daniel Vrcic <dvrcic@srce.hr> - 0.1.1-1%{?dist}
 - num of leftovers in subject
 - use created time as key in leftovers structure
