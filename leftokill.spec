@@ -52,7 +52,6 @@ rm -rf $RPM_BUILD_ROOT
 %dir %{_localstatedir}/log/%{name}/
 %dir %{_localstatedir}/run/%{name}/
 %{python_sitelib}/%{name}/*.py[co]
-%{_localstatedir}/run/%{name}/
 
 %changelog
 * Sat Nov 19 2016 Daniel Vrcic <dvrcic@srce.hr> - 0.1.1-2%{?dist}
