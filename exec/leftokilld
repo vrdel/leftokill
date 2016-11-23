@@ -99,7 +99,7 @@ def main():
             lobj.init_syslog()
         if l.lower() == 'file':
             lobj.init_filelog()
-    loghandle = lobj.loghandle
+            loghandle = lobj.loghandle
 
     parser = argparse.ArgumentParser(prog='leftokilld')
     group = parser.add_mutually_exclusive_group(required=True)
