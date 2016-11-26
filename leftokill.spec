@@ -56,6 +56,7 @@ rm -rf $RPM_BUILD_ROOT
 %changelog
 * Sat Nov 26 2016 Daniel Vrcic <dvrcic@srce.hr> - 0.1.1-3%{?dist}
 - removed SMTP SSL
+- only root execute
 * Sat Nov 19 2016 Daniel Vrcic <dvrcic@srce.hr> - 0.1.1-2%{?dist}
 - cleanup stale pidfile lock
 - fix handling of empty exclude options
