@@ -40,10 +40,7 @@ class Report(threading.Thread):
 
     def _send_email(self):
         try:
-            port = 25 if not self.confopt['reportsmtpssl'] else 587
-            s = smtplib.SMTP(self.confopt['reportsmtp'], port, timeout=120)
-            if self.confopt['reportsmtpssl']:
-                s.starttls()
+            s = smtplib.SMTP(self.confopt['reportsmtp'], 25, timeout=120)
             s.ehlo()
             if self.confopt['reportsmtplogin'] and self.confopt['reportsmtppass']:
                 s.login(self.confopt['reportsmtplogin'], self.confopt['reportsmtppass'])

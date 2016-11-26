@@ -49,7 +49,6 @@ def parse_config(conffile, logger):
                     confopts['reportsmtplogin'] = config.get(section, 'SMTPLogin')
                     confopts['reportsmtppass'] = config.get(section, 'SMTPPass')
                     confopts['reportto'] = config.get(section, 'To')
-                    confopts['reportsmtpssl'] = eval(config.get(section, 'SMTPSSL'))
                     confopts['sendreport'] = eval(config.get(section, 'Send'))
 
         else:
