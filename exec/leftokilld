@@ -14,7 +14,7 @@ import signal
 import threading
 
 conffile = '/etc/leftokill/leftokill.conf'
-pidfile = '/var/run/leftokill/pid'
+pidfile = '/var/lib/leftokill/pid'
 
 def daemon_start(context_daemon, logger, loghandle, events, confopts, restart=False):
     if context_daemon.pidfile.is_locked() and not \

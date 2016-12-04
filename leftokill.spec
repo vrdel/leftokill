@@ -1,9 +1,9 @@
 %{!?python_sitelib: %global python_sitelib %(%{__python} -c "from distutils.sysconfig import get_python_lib; print(get_python_lib())")}
 
 Name:           leftokill
-Version:        0.1.1
-Release:        4%{?dist}.srce
-Summary:        Unix daemon that cleans processes/threads left by the job scheduler
+Version:        0.1.2
+Release:        1%{?dist}.srce
+Summary:        Unix daemon that cleans processes left by the job scheduler
 Group:          System Environment/Daemons
 License:        GPL
 URL:            https://github.com/vrdel/leftokill 
@@ -16,7 +16,7 @@ Requires:       python-daemon
 Requires:       python-argparse
 
 %description
-Unix daemon that cleans the processes/threads left by the job scheduler
+Unix daemon that cleans the processes left by the job scheduler
 
 %prep
 %setup -q
@@ -28,7 +28,7 @@ Unix daemon that cleans the processes/threads left by the job scheduler
 rm -rf $RPM_BUILD_ROOT
 %{__python} setup.py install --skip-build --root $RPM_BUILD_ROOT --record=INSTALLED_FILES
 install --directory --mode 755 $RPM_BUILD_ROOT/%{_localstatedir}/log/%{name}/
-install --directory --mode 755 $RPM_BUILD_ROOT/%{_localstatedir}/run/%{name}/
+install --directory --mode 755 $RPM_BUILD_ROOT/%{_sharedstatedir}/%{name}/
 
 %post
 /sbin/chkconfig --add leftokill
@@ -41,19 +41,21 @@ fi
 exit 0
 
 %postun
-rm -rf %{_localstatedir}/run/%{name}/
+rm -rf %{_sharedstatedir}/%{name}/
 
 %clean
 rm -rf $RPM_BUILD_ROOT
 
 %files -f INSTALLED_FILES
-%config(noreplace) %attr(600,root,root) %{_sysconfdir}/%{name}/%{name}.conf
+%config %attr(600,root,root) %{_sysconfdir}/%{name}/%{name}.conf
 %dir %{python_sitelib}/%{name}/
 %dir %{_localstatedir}/log/%{name}/
-%dir %{_localstatedir}/run/%{name}/
+%dir %{_sharedstatedir}/%{name}/
 %{python_sitelib}/%{name}/*.py[co]
 
 %changelog
+* Sun Dec 4 2016 Daniel Vrcic <dvrcic@srce.hr> - 0.1.2-1%{?dist}
+- pidfile moved to /var/lib
 * Sun Dec 4 2016 Daniel Vrcic <dvrcic@srce.hr> - 0.1.1-4%{?dist}
 - created time + pid as key in report structure
 * Sat Nov 26 2016 Daniel Vrcic <dvrcic@srce.hr> - 0.1.1-3%{?dist}
