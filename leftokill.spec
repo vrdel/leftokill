@@ -2,7 +2,7 @@
 
 Name:           leftokill
 Version:        0.1.1
-Release:        3%{?dist}.srce
+Release:        4%{?dist}.srce
 Summary:        Unix daemon that cleans processes/threads left by the job scheduler
 Group:          System Environment/Daemons
 License:        GPL
@@ -54,6 +54,8 @@ rm -rf $RPM_BUILD_ROOT
 %{python_sitelib}/%{name}/*.py[co]
 
 %changelog
+* Sun Dec 4 2016 Daniel Vrcic <dvrcic@srce.hr> - 0.1.1-4%{?dist}
+- created time + pid as key in report structure
 * Sat Nov 26 2016 Daniel Vrcic <dvrcic@srce.hr> - 0.1.1-3%{?dist}
 - removed SMTP SSL
 - only root execute

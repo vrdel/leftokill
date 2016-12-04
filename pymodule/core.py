@@ -78,39 +78,39 @@ def build_report_leftovers(cand=None, pgone=list(), palive=list(), cgone=list(),
 
     if cand:
         proc_childs = cand.children(recursive=True)
-        keytime = extract_creattime(cand)
-        report_leftovers[keytime] = dict({'name': cand.name(), 'username': cand.username(), 'nchilds': len(proc_childs),
-                                    'created': datetime.datetime.fromtimestamp(cand.create_time()).strftime("%Y-%m-%d %H:%M:%S"),
-                                    'status': cand.status(), 'cpuuser': cand.cpu_times()[0], 'cpusys': cand.cpu_times()[1],
-                                    'rss': bytes2human(cand.memory_info()[0]), 'cmdline': ' '.join(cand.cmdline())})
+        key = extract_creattime(cand) + ' - ' + str(cand.pid)
+        report_leftovers[key] = dict({'name': cand.name(), 'username': cand.username(), 'nchilds': len(proc_childs),
+                                      'created': datetime.datetime.fromtimestamp(cand.create_time()).strftime("%Y-%m-%d %H:%M:%S"),
+                                      'status': cand.status(), 'cpuuser': cand.cpu_times()[0], 'cpusys': cand.cpu_times()[1],
+                                      'rss': bytes2human(cand.memory_info()[0]), 'cmdline': ' '.join(cand.cmdline())})
 
-        report_leftovers[keytime]['msg'] = dict({'candidate': 'PID:%d Candidate:%s User:%s Created:%s Status:%s Childs:%d CPU:user=%s, sys=%s Memory:RSS=%s CMD:%s' \
-                    % (cand.pid, report_leftovers[keytime]['name'], report_leftovers[keytime]['username'], report_leftovers[keytime]['created'],
-                        report_leftovers[keytime]['status'], report_leftovers[keytime]['nchilds'], report_leftovers[keytime]['cpuuser'],
-                        report_leftovers[keytime]['cpusys'], report_leftovers[keytime]['rss'], report_leftovers[keytime]['cmdline'])})
-        report_leftovers[keytime]['msg'].update(dict({'main': list()}))
-        report_leftovers[keytime]['msg'].update(dict({'childs': list()}))
+        report_leftovers[key]['msg'] = dict({'candidate': 'PID:%d Candidate:%s User:%s Created:%s Status:%s Childs:%d CPU:user=%s, sys=%s Memory:RSS=%s CMD:%s' \
+                    % (cand.pid, report_leftovers[key]['name'], report_leftovers[key]['username'], report_leftovers[key]['created'],
+                        report_leftovers[key]['status'], report_leftovers[key]['nchilds'], report_leftovers[key]['cpuuser'],
+                        report_leftovers[key]['cpusys'], report_leftovers[key]['rss'], report_leftovers[key]['cmdline'])})
+        report_leftovers[key]['msg'].update(dict({'main': list()}))
+        report_leftovers[key]['msg'].update(dict({'childs': list()}))
 
     else:
         for p in pgone:
-            keytime = extract_creattime(p)
+            key = extract_creattime(p) + ' - ' + str(p.pid)
             rmsg = 'SIGTERM - PID:%d Returncode:%s' % (p.pid, p.returncode)
-            report_leftovers[keytime]['msg']['main'].append(rmsg)
+            report_leftovers[key]['msg']['main'].append(rmsg)
 
         for p in palive:
-            keytime = extract_creattime(p)
+            key = extract_creattime(p) + ' - ' + str(p.pid)
             rmsg = 'SIGKILL - PID:%d' % (p.pid)
-            report_leftovers[keytime]['msg']['main'].append(rmsg)
+            report_leftovers[key]['msg']['main'].append(rmsg)
 
         for c in cgone:
-            keytime = extract_creattime(p)
+            key = extract_creattime(p) + ' - ' + str(p.pid)
             rmsg = 'SIGTERM CHILD - PID:%d Returncode:%s' % (c.pid, c.returncode)
-            report_leftovers[keytime]['msg']['childs'].append(rmsg)
+            report_leftovers[key]['msg']['childs'].append(rmsg)
 
         for c in calive:
-            keytime = extract_creattime(p)
+            key = extract_creattime(p) + ' - ' + str(p.pid)
             rmsg = 'SIGKILL CHILD - PID:%d' % (c.pid)
-            report_leftovers[keytime]['msg']['childs'].append(rmsg)
+            report_leftovers[key]['msg']['childs'].append(rmsg)
 
 def build_report_syslog(leftovers, confopts):
     global reported
