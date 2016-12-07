@@ -1,2 +1,2 @@
 # leftokill
-Process leftover killer
+Unix daemon that cleans the processes left by the job scheduler
