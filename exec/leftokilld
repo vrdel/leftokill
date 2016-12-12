@@ -19,9 +19,13 @@ pidfile = '/var/lib/leftokill/pid'
 def daemon_start(context_daemon, logger, loghandle, events, confopts, restart=False):
     if context_daemon.pidfile.is_locked() and not \
             context_daemon.pidfile.i_am_locking():
-        logger.info('Already running (%s)' % \
-                    context_daemon.pidfile.read_pid())
-        return 0
+        pid = context_daemon.pidfile.read_pid()
+        try:
+            process = psutil.Process(pid=pid)
+            logger.info('Already running (%s)' % pid)
+            return 0
+        except psutil.NoSuchProcess:
+            context_daemon.pidfile.break_lock()
 
     if loghandle:
         context_daemon.files_preserve = [loghandle]

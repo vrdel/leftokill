@@ -1,7 +1,7 @@
 %{!?python_sitelib: %global python_sitelib %(%{__python} -c "from distutils.sysconfig import get_python_lib; print(get_python_lib())")}
 
 Name:           leftokill
-Version:        0.1.2
+Version:        0.1.3
 Release:        1%{?dist}.srce
 Summary:        Unix daemon that cleans processes left by the job scheduler
 Group:          System Environment/Daemons
@@ -54,6 +54,8 @@ rm -rf $RPM_BUILD_ROOT
 %{python_sitelib}/%{name}/*.py[co]
 
 %changelog
+* Mon Dec 12 2016 Daniel Vrcic <dvrcic@srce.hr> - 0.1.3-1%{?dist}
+- silently clean stale pidfile lock on service start
 * Sun Dec 4 2016 Daniel Vrcic <dvrcic@srce.hr> - 0.1.2-1%{?dist}
 - pidfile moved to /var/lib
 * Sun Dec 4 2016 Daniel Vrcic <dvrcic@srce.hr> - 0.1.1-4%{?dist}
