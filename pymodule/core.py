@@ -13,30 +13,34 @@ homeprefix = '/home/'
 reported, report_leftovers = set(), dict()
 
 
-def term_and_kill(candidate):
+def term_and_kill(candidate, logger):
     cgone, calive, pgone, palive = list(), list(), list(), list()
     childs = dict()
 
-    proc_childs = candidate.children(recursive=True)
+    try:
+        proc_childs = candidate.children(recursive=True)
 
-    if len(proc_childs) > 0:
-        childs[candidate.pid] = proc_childs
+        if len(proc_childs) > 0:
+            childs[candidate.pid] = proc_childs
 
-        if childs.get(candidate.pid):
-            for c in childs[candidate.pid]:
-                c.terminate()
+            if childs.get(candidate.pid):
+                for c in childs[candidate.pid]:
+                    c.terminate()
 
-            cgone, calive = psutil.wait_procs(childs[candidate.pid], timeout=3)
+                cgone, calive = psutil.wait_procs(childs[candidate.pid], timeout=3)
 
-            for c in calive:
-                c.kill()
+                for c in calive:
+                    c.kill()
 
-    candidate.terminate()
+        candidate.terminate()
 
-    pgone, palive = psutil.wait_procs([candidate], timeout=3)
+        pgone, palive = psutil.wait_procs([candidate], timeout=3)
 
-    for p in palive:
-        p.kill()
+        for p in palive:
+            p.kill()
+
+    except psutil.NoSuchProcess as e:
+        logger.warning(e)
 
     return cgone, calive, pgone, palive
 
@@ -76,20 +80,30 @@ def build_report_leftovers(cand=None, pgone=list(), palive=list(), cgone=list(),
 
         return "%sB" % n
 
+    def build_report_entry(key, cand, childs, msg=None):
+        if not msg:
+            report_leftovers[key] = dict({'name': cand.name(), 'username': cand.username(), 'nchilds': len(childs),
+                                        'created': datetime.datetime.fromtimestamp(cand.create_time()).strftime("%Y-%m-%d %H:%M:%S"),
+                                        'status': cand.status(), 'cpuuser': cand.cpu_times()[0], 'cpusys': cand.cpu_times()[1],
+                                        'rss': bytes2human(cand.memory_info()[0]), 'cmdline': ' '.join(cand.cmdline())})
+
+            report_leftovers[key]['msg'] = dict({'candidate': 'PID:%d Candidate:%s User:%s Created:%s Status:%s Childs:%d CPU:user=%s, sys=%s Memory:RSS=%s CMD:%s' \
+                        % (cand.pid, report_leftovers[key]['name'], report_leftovers[key]['username'], report_leftovers[key]['created'],
+                            report_leftovers[key]['status'], report_leftovers[key]['nchilds'], report_leftovers[key]['cpuuser'],
+                            report_leftovers[key]['cpusys'], report_leftovers[key]['rss'], report_leftovers[key]['cmdline'])})
+            report_leftovers[key]['msg'].update(dict({'main': list()}))
+            report_leftovers[key]['msg'].update(dict({'childs': list()}))
+
+        else:
+            report_leftovers[key] = dict()
+            report_leftovers[key]['msg'] = dict({'candidate': msg})
+            report_leftovers[key]['msg'].update(dict({'main': list()}))
+            report_leftovers[key]['msg'].update(dict({'childs': list()}))
+
     if cand:
         proc_childs = cand.children(recursive=True)
         key = extract_creattime(cand) + ' - ' + str(cand.pid)
-        report_leftovers[key] = dict({'name': cand.name(), 'username': cand.username(), 'nchilds': len(proc_childs),
-                                      'created': datetime.datetime.fromtimestamp(cand.create_time()).strftime("%Y-%m-%d %H:%M:%S"),
-                                      'status': cand.status(), 'cpuuser': cand.cpu_times()[0], 'cpusys': cand.cpu_times()[1],
-                                      'rss': bytes2human(cand.memory_info()[0]), 'cmdline': ' '.join(cand.cmdline())})
-
-        report_leftovers[key]['msg'] = dict({'candidate': 'PID:%d Candidate:%s User:%s Created:%s Status:%s Childs:%d CPU:user=%s, sys=%s Memory:RSS=%s CMD:%s' \
-                    % (cand.pid, report_leftovers[key]['name'], report_leftovers[key]['username'], report_leftovers[key]['created'],
-                        report_leftovers[key]['status'], report_leftovers[key]['nchilds'], report_leftovers[key]['cpuuser'],
-                        report_leftovers[key]['cpusys'], report_leftovers[key]['rss'], report_leftovers[key]['cmdline'])})
-        report_leftovers[key]['msg'].update(dict({'main': list()}))
-        report_leftovers[key]['msg'].update(dict({'childs': list()}))
+        build_report_entry(key, cand, proc_childs)
 
     else:
         for p in pgone:
@@ -103,14 +117,22 @@ def build_report_leftovers(cand=None, pgone=list(), palive=list(), cgone=list(),
             report_leftovers[key]['msg']['main'].append(rmsg)
 
         for c in cgone:
-            key = extract_creattime(p) + ' - ' + str(p.pid)
-            rmsg = 'SIGTERM CHILD - PID:%d Returncode:%s' % (c.pid, c.returncode)
-            report_leftovers[key]['msg']['childs'].append(rmsg)
+            try:
+                key = extract_creattime(p) + ' - ' + str(p.pid)
+                rmsg = 'SIGTERM CHILD - PID:%d Returncode:%s' % (c.pid, c.returncode)
+                report_leftovers[key]['msg']['childs'].append(rmsg)
+            except NameError:
+                key = extract_creattime(c) + ' - ' + str(c.pid)
+                build_report_entry(key, c, [], 'Candidate (child exited): ' + str(c))
 
         for c in calive:
-            key = extract_creattime(p) + ' - ' + str(p.pid)
-            rmsg = 'SIGKILL CHILD - PID:%d' % (c.pid)
-            report_leftovers[key]['msg']['childs'].append(rmsg)
+            try:
+                key = extract_creattime(p) + ' - ' + str(p.pid)
+                rmsg = 'SIGKILL CHILD - PID:%d' % (c.pid)
+                report_leftovers[key]['msg']['childs'].append(rmsg)
+            except NameError:
+                key = extract_creattime(c) + ' - ' + str(c.pid)
+                build_report_entry(key, c, [], 'Candidate (child exited): ' + str(c))
 
 def build_report_syslog(leftovers, confopts):
     global reported
@@ -140,7 +162,6 @@ def build_report_syslog(leftovers, confopts):
 def run(confopts, logger, events):
     global report_leftovers
     lock = threading.Lock()
-    termev = threading.Event()
 
     if confopts['sendreport']:
         events.update({'flushonterm': threading.Event()})
@@ -161,7 +182,7 @@ def run(confopts, logger, events):
                 build_report_leftovers(cand=cand)
 
                 if confopts['noexec'] == False:
-                    cgone, calive, pgone, palive = term_and_kill(cand)
+                    cgone, calive, pgone, palive = term_and_kill(cand, logger)
                     build_report_leftovers(pgone=pgone, palive=palive, cgone=cgone,
                                        calive=calive)
 
