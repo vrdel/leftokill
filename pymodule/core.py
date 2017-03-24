@@ -80,9 +80,9 @@ def build_report_leftovers(cand=None, pgone=list(), palive=list(), cgone=list(),
 
         return "%sB" % n
 
-    def build_report_entry(key, cand, nchilds, msg=None):
+    def build_report_entry(key, cand, msg=None):
         if not msg:
-            report_leftovers[key] = dict({'name': cand.name(), 'username': cand.username(), 'nchilds': nchilds),
+            report_leftovers[key] = dict({'name': cand.name(), 'username': cand.username(), 'nchilds': len(cand.children(recursive=True)),
                                         'created': datetime.datetime.fromtimestamp(cand.create_time()).strftime("%Y-%m-%d %H:%M:%S"),
                                         'status': cand.status(), 'cpuuser': cand.cpu_times()[0], 'cpusys': cand.cpu_times()[1],
                                         'rss': bytes2human(cand.memory_info()[0]), 'cmdline': ' '.join(cand.cmdline())})
@@ -101,9 +101,8 @@ def build_report_leftovers(cand=None, pgone=list(), palive=list(), cgone=list(),
             report_leftovers[key]['msg'].update(dict({'childs': list()}))
 
     if cand:
-        proc_childs = cand.children(recursive=True)
         key = extract_creattime(cand) + ' - ' + str(cand.pid)
-        build_report_entry(key, cand, len(proc_childs))
+        build_report_entry(key, cand)
 
     else:
         for p in pgone:
