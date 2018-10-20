@@ -1,7 +1,7 @@
 %{!?python_sitelib: %global python_sitelib %(%{__python} -c "from distutils.sysconfig import get_python_lib; print(get_python_lib())")}
 
 Name:           leftokill
-Version:        0.1.5
+Version:        0.1.6
 Release:        1%{?dist}.srce
 Summary:        Unix daemon that cleans processes left by the job scheduler
 Group:          System Environment/Daemons
@@ -11,7 +11,7 @@ Source0:        %{name}-%{version}.tar.gz
 BuildRoot:      %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 BuildArch:      noarch 
 BuildRequires:  python2-devel
-Requires:       python-psutil >= 4.3
+Requires:       python2-psutil >= 4.3
 Requires:       python-daemon
 Requires:       python-argparse
 
@@ -30,25 +30,14 @@ rm -rf $RPM_BUILD_ROOT
 install --directory --mode 755 $RPM_BUILD_ROOT/%{_localstatedir}/log/%{name}/
 install --directory --mode 755 $RPM_BUILD_ROOT/%{_sharedstatedir}/%{name}/
 
-
 %post
-/sbin/chkconfig --add leftokill
-if [ "$1" = 2 ]; then
-  /sbin/service leftokill stop > /dev/null 2>&1
-fi
+%systemd_post leftokill.service
 
 %preun
-if [ "$1" = 0 ]; then
-  /sbin/service leftokill stop > /dev/null 2>&1
-  /sbin/chkconfig --del leftokill
-fi
-exit 0
+%systemd_preun leftokill.service
 
 %postun
-if [ "$1" = 0 ]; then
-  rm -rf %{_sharedstatedir}/%{name}/
-fi
-exit 0
+%systemd_postun_with_restart leftokill.service
 
 %clean
 rm -rf $RPM_BUILD_ROOT
@@ -61,6 +50,8 @@ rm -rf $RPM_BUILD_ROOT
 %{python_sitelib}/%{name}/*.py[co]
 
 %changelog
+* Sat Oct 20 2018 Daniel Vrcic <dvrcic@srce.hr> - 0.1.6-1%{?dist}
+- only CentOS 7 support
 * Thu Mar 23 2017 Daniel Vrcic <dvrcic@srce.hr> - 0.1.5-1%{?dist}
 - handle volatile candidate process tree 
 * Thu Dec 15 2016 Daniel Vrcic <dvrcic@srce.hr> - 0.1.4-1%{?dist}

@@ -25,6 +25,6 @@ setup(
     package_dir = {'leftokill': 'pymodule/'},
     packages = ['leftokill'],
     data_files = [('/etc/leftokill', glob.glob('config/*.conf')),
-                  ('/etc/init.d/', glob.glob('init/leftokill'))],
+                  ('/usr/lib/systemd/system', glob.glob('init/leftokill.service'))],
     scripts = glob.glob('exec/*') + glob.glob('simul/*')
     )
