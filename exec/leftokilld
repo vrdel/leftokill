@@ -6,7 +6,6 @@ from leftokill import log
 
 import argparse
 import daemon
-import daemon.pidlockfile
 import os
 import sys
 import psutil
@@ -15,6 +14,15 @@ import threading
 
 conffile = '/etc/leftokill/leftokill.conf'
 pidfile = '/var/lib/leftokill/pid'
+
+"""
+    try first to import el6 modulefile, if that fails try to import el7
+    modulefile
+"""
+try:
+    import daemon.pidlockfile as pidlockfile
+except ImportError:
+    import daemon.pidfile as pidlockfile
 
 def daemon_start(context_daemon, logger, loghandle, events, confopts, restart=False):
     if context_daemon.pidfile.is_locked() and not \
@@ -125,7 +133,7 @@ def main():
 
     elif args.daemon:
         context_daemon = daemon.DaemonContext()
-        context_daemon.pidfile = daemon.pidlockfile.PIDLockFile(pidfile, threaded=False)
+        context_daemon.pidfile = pidlockfile.PIDLockFile(pidfile, threaded=False)
 
         if args.daemon == 'start':
             daemon_start(context_daemon, logger, loghandle, events, confopts)
