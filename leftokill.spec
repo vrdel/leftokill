@@ -43,7 +43,7 @@ install --directory --mode 755 $RPM_BUILD_ROOT/%{_sharedstatedir}/%{name}/
 rm -rf $RPM_BUILD_ROOT
 
 %files -f INSTALLED_FILES
-%config %attr(600,root,root) %{_sysconfdir}/%{name}/%{name}.conf
+%config(noreplace) %attr(600,root,root) %{_sysconfdir}/%{name}/%{name}.conf
 %dir %{python_sitelib}/%{name}/
 %dir %{_localstatedir}/log/%{name}/
 %dir %{_sharedstatedir}/%{name}/
