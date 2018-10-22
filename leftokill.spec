@@ -1,7 +1,7 @@
 %{!?python_sitelib: %global python_sitelib %(%{__python} -c "from distutils.sysconfig import get_python_lib; print(get_python_lib())")}
 
 Name:           leftokill
-Version:        0.1.6
+Version:        0.1.7
 Release:        1%{?dist}.srce
 Summary:        Unix daemon that cleans processes left by the job scheduler
 Group:          System Environment/Daemons
@@ -11,7 +11,7 @@ Source0:        %{name}-%{version}.tar.gz
 BuildRoot:      %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 BuildArch:      noarch 
 BuildRequires:  python2-devel
-Requires:       python-psutil >= 4.3
+Requires:       python2-psutil >= 4.3
 Requires:       python-daemon
 Requires:       python-argparse
 
