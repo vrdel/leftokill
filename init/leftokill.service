@@ -5,7 +5,7 @@ After=network.target
 [Service]
 Type=simple
 ExecStart=/usr/bin/leftokilld -d start
-ExecStop=/usr/bin/leftokilld -d stop 
+ExecStop=/usr/bin/leftokilld -d stop
 
 [Install]
-WantedBy=multi−user.target
+WantedBy=multi-user.target
